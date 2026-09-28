@@ -1,0 +1,15 @@
+{
+  "name": "coloredin",
+  "private": true,
+  "description": "ColoredIn: Color Your Future. A career-themed coloring app for girls.",
+  "scripts": {
+    "dev": "concurrently -n api,web -c magenta,cyan \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
+    "install:all": "npm install && npm --prefix server install && npm --prefix client install",
+    "build": "npm --prefix server install && npm --prefix client install --include=dev && npm --prefix client run build",
+    "start": "NODE_ENV=production npm --prefix server start",
+    "seed": "npm --prefix server run seed"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}
