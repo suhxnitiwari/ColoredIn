@@ -32,9 +32,6 @@ export default function Home() {
     <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
       <section className="relative grid items-center gap-6 py-8 sm:py-12 md:grid-cols-[1.2fr_1fr]">
         <div className="animate-rise">
-          <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 font-display text-sm text-grape-600 ring-1 ring-lilac-200">
-            <Icon name="sparkle" size={16} /> Free for every kid, always
-          </p>
           <h1 className="text-4xl font-semibold leading-[1.05] tracking-tight text-plum-900 sm:text-6xl">
             Color your <span className="relative whitespace-nowrap text-grape-600">future<svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 200 12" preserveAspectRatio="none"><path d="M2 9c40-6 120-8 196-3" stroke="#ffbad1" strokeWidth="6" fill="none" strokeLinecap="round" /></svg></span>.
           </h1>
