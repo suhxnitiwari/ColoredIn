@@ -124,3 +124,6 @@
 .boat-oar { animation: boat-oar 1.4s ease-in-out infinite alternate; }
 @keyframes boat-oar { from { transform: rotate(-12deg); } to { transform: rotate(16deg); } }
 .boat-wake { transform-box: fill-box; transform-origin: center; animation: foam 2s ease-in-out infinite; }
+[data-moving='true'] .explorer-walk { animation: explorer-walk 0.32s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+@keyframes explorer-walk { from { transform: translateY(0) rotate(-3deg); } to { transform: translateY(-6px) rotate(3deg); } }
+.boat-paddle { animation: world-roll 1.2s linear infinite; }

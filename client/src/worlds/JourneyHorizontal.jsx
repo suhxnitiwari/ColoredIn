@@ -6,13 +6,14 @@ import { setAmbience, startAmbience, stopAmbience } from '../lib/ambience.js';
 import * as A from './art.jsx';
 import { BIOMES, SKY, biomeFor } from './biomes.js';
 import { Art, Particles, rng, smoothPath } from './Journey.jsx';
-import LevelStop, { ExplorerBoat } from './LevelStop.jsx';
+import LevelStop, { ExplorerBoat, WalkingExplorer } from './LevelStop.jsx';
 
 // The iPad-first adventure map: a side-scrolling world the child swipes
 // through. Every world is built in layers for depth: sky and sun, hazy far
 // hills, nearer hills, the ground with the stream and levels, and a blurred
 // foreground, each sliding at its own speed (parallax). The stream pours over
-// a waterfall between worlds, and the explorer rows their boat to each level.
+// a waterfall between worlds. The explorer paddles in on a swan boat, then
+// walks a trail on land, crossing the stream on bridges, to each level.
 
 const SIGN = 300; // space at the start of a world (title ribbon + bridge)
 const COL = 214; // horizontal space per level
@@ -22,8 +23,18 @@ const END_W = 780;
 const HORIZON = 0.27;
 const ENTRY = 0.8; // stream height where it enters a world (after the fall)
 const EXIT = 0.47; // stream height where it leaves a world (top of the cliff)
-const stopY = (i) => (i % 2 === 0 ? 0.7 : 0.43);
+const STREAM_Y = 0.655; // the stream meanders through the middle of each world
+const TOP_Y = 0.4; // levels on the far bank
+const BOT_Y = 0.8; // levels on the near bank
+const stopY = (i) => (i % 2 === 0 ? BOT_Y : TOP_Y);
 const worldWidth = (n) => SIGN + n * COL + TAIL;
+const streamYAt = (k) => STREAM_Y + 0.018 * Math.sin(k * 1.3); // k = half-column index
+
+// Dirt, sand or snow trail colours per world: [edge, path]
+const TRAIL = {
+  rainforest: ['#a9824f', '#d9b27a'], desert: ['#d2a865', '#f3dcaa'], autumn: ['#9c6b3f', '#d6a36c'],
+  mountains: ['#9a8a74', '#cbbba1'], garden: ['#c9a36f', '#ecd3a6'], tundra: ['#b9cbe0', '#f4f8fd'], beach: ['#e0c188', '#f8e8c2'], sky: ['#a9824f', '#d9b27a'],
+};
 
 const GRASS = { desert: '#d1a95e', autumn: '#d08a45', beach: '#8fbf6a', garden: '#6fcf8a', mountains: '#6fbf84' };
 const AUTUMN = [['#f28c38', '#ffb45c'], ['#e8594f', '#ff8a7a'], ['#f2b92c', '#ffe07a']];
@@ -151,7 +162,7 @@ function Backdrop({ biome, panelLeft, panelW, vw, H, seed, village, plain }) {
 function Foreground({ biome, panelLeft, panelW, vw, H, seed }) {
   const leafy = ['rainforest', 'autumn', 'garden', 'sky'].includes(biome.key);
   return (
-    <Layer k={-0.3} panelLeft={panelLeft} panelW={panelW} vw={vw} z={40}>
+    <Layer k={-0.3} panelLeft={panelLeft} panelW={panelW} vw={vw} z={28}>
       {(w) => {
         const r = rng(seed + 21);
         const items = [];
@@ -166,7 +177,7 @@ function Foreground({ biome, panelLeft, panelW, vw, H, seed }) {
                 ))}
               </g>
             ) : (
-              <g key={i} transform={`translate(${x} ${H}) scale(${s})`} fill={biome.fg} opacity=".9">
+              <g key={i} transform={`translate(${x} ${H + 36}) scale(${s * 0.62})`} fill={biome.fg} opacity=".85">
                 {biome.key === 'tundra'
                   ? <path d="M-120 10 C-80 -50 40 -60 120 10 Z" fill="#fff" opacity=".95" />
                   : biome.key === 'desert' || biome.key === 'mountains'
@@ -192,10 +203,10 @@ function StreamSvg({ d, w, H, biome, pathRef }) {
   const common = { d, fill: 'none', strokeLinecap: 'round' };
   return (
     <svg className="pointer-events-none absolute left-0 top-0" width={w} height={H} aria-hidden="true">
-      <path {...common} stroke="#1b3a2a" strokeOpacity=".1" strokeWidth="96" transform="translate(0 6)" />
-      <path {...common} stroke={biome.bank} strokeWidth="88" />
-      <path ref={pathRef} {...common} stroke={biome.water} strokeWidth="66" />
-      <path {...common} stroke={biome.light} strokeWidth="30" opacity=".75" />
+      <path {...common} stroke="#1b3a2a" strokeOpacity=".1" strokeWidth="86" transform="translate(0 6)" />
+      <path {...common} stroke={biome.bank} strokeWidth="80" />
+      <path ref={pathRef} {...common} stroke={biome.water} strokeWidth="60" />
+      <path {...common} stroke={biome.light} strokeWidth="26" opacity=".75" />
       <path {...common} stroke="#fff" strokeWidth="3" strokeDasharray="16 38" opacity=".85" className="stream-flow" />
       <path {...common} stroke="#fff" strokeWidth="2" strokeDasharray="6 46" opacity=".6" className="stream-flow-slow" transform="translate(0 14)" />
       <path {...common} stroke="#fff" strokeWidth="2" strokeDasharray="6 52" opacity=".5" className="stream-flow" transform="translate(0 -14)" />
@@ -225,17 +236,64 @@ function Ribbon({ category, biome, index, onSpeak }) {
   );
 }
 
-function LogBridge({ x, y }) {
+/** A walking trail on land (drawn under the stream; bridges carry it across). */
+function TrailSvg({ d, w, H, colors, pathRef }) {
   return (
-    <div className="pointer-events-none absolute z-[26]" style={{ left: x, top: y, transform: 'translate(-50%, -50%)' }} aria-hidden="true">
-      <svg width="58" height="150" viewBox="0 0 58 150">
-        <rect x="6" y="10" width="46" height="130" rx="20" fill="#9a6238" />
-        <rect x="12" y="10" width="14" height="130" rx="7" fill="#b47a4a" />
-        <path d="M18 30 L18 60 M40 70 L40 110 M30 118 L30 132" stroke="#7a4a2e" strokeWidth="3" strokeLinecap="round" />
-        <ellipse cx="29" cy="12" rx="23" ry="10" fill="#e7bf8e" stroke="#7a4a2e" strokeWidth="3" />
-        <ellipse cx="29" cy="12" rx="11" ry="4.5" fill="none" stroke="#b47a4a" strokeWidth="2" />
-        <ellipse cx="29" cy="138" rx="23" ry="10" fill="#9a6238" />
-        <path d="M14 50 C8 54 8 62 16 62 M44 90 C52 92 52 100 44 102" stroke="#5cc27a" strokeWidth="5" fill="none" strokeLinecap="round" />
+    <svg className="pointer-events-none absolute left-0 top-0" width={w} height={H} aria-hidden="true">
+      <path d={d} fill="none" stroke="#1b3a2a" strokeOpacity=".1" strokeWidth="34" strokeLinecap="round" transform="translate(0 4)" />
+      <path d={d} fill="none" stroke={colors[0]} strokeWidth="30" strokeLinecap="round" />
+      <path ref={pathRef} d={d} fill="none" stroke={colors[1]} strokeWidth="22" strokeLinecap="round" />
+      <path d={d} fill="none" stroke={colors[0]} strokeWidth="4" strokeLinecap="round" strokeDasharray="2 26" opacity=".7" />
+    </svg>
+  );
+}
+
+/** Wooden plank bridge with railings, rotated to follow the trail. */
+function PlankBridge({ x, y, angle }) {
+  return (
+    <div className="pointer-events-none absolute z-[24]" style={{ left: x, top: y, transform: `translate(-50%, -50%) rotate(${angle}deg)` }} aria-hidden="true">
+      <svg width="128" height="64" viewBox="0 0 170 64" preserveAspectRatio="none" className="overflow-visible">
+        <rect x="6" y="12" width="158" height="40" rx="6" fill="#1b3a2a" opacity=".15" transform="translate(0 6)" />
+        <rect x="6" y="14" width="158" height="36" rx="5" fill="#b47a4a" />
+        {Array.from({ length: 12 }, (_, i) => (
+          <rect key={i} x={10 + i * 13} y="14" width="10" height="36" rx="2" fill={i % 2 ? '#c98f5a' : '#b98050'} />
+        ))}
+        <path d="M6 12 Q85 2 164 12" stroke="#8a5a3c" strokeWidth="5" fill="none" strokeLinecap="round" />
+        <path d="M6 52 Q85 62 164 52" stroke="#8a5a3c" strokeWidth="5" fill="none" strokeLinecap="round" />
+        {[6, 46, 85, 124, 164].map((px) => (
+          <g key={px}>
+            <circle cx={px} cy={px === 85 ? 4 : px === 46 || px === 124 ? 7 : 12} r="4.5" fill="#7a4a2e" />
+            <circle cx={px} cy={px === 85 ? 60 : px === 46 || px === 124 ? 57 : 52} r="4.5" fill="#7a4a2e" />
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+/** A little wooden dock where the paddle boat ties up. */
+function Dock({ x, y }) {
+  return (
+    <div className="pointer-events-none absolute z-[22]" style={{ left: x, top: y, transform: 'translate(-50%, -100%)' }} aria-hidden="true">
+      <svg width="64" height="70" viewBox="0 0 64 70">
+        <rect x="8" y="6" width="48" height="58" rx="4" fill="#b47a4a" />
+        {[0, 1, 2, 3, 4].map((i) => <rect key={i} x="8" y={8 + i * 11.5} width="48" height="8" rx="2" fill={i % 2 ? '#c98f5a' : '#a86f42'} />)}
+        {[[6, 4], [58, 4], [6, 62], [58, 62]].map(([cx, cy]) => <circle key={`${cx}${cy}`} cx={cx} cy={cy} r="5.5" fill="#7a4a2e" />)}
+      </svg>
+    </div>
+  );
+}
+
+/** Wooden lookout at the top of the waterfall, where each world's trail ends. */
+function Lookout({ x, y, color }) {
+  return (
+    <div className="pointer-events-none absolute z-[22]" style={{ left: x, top: y, transform: 'translate(-50%, -85%)' }} aria-hidden="true">
+      <svg width="90" height="96" viewBox="0 0 90 96">
+        <ellipse cx="45" cy="88" rx="40" ry="8" fill="#1b3a2a" opacity=".15" />
+        <rect x="8" y="64" width="74" height="22" rx="4" fill="#b47a4a" />
+        <path d="M8 64 L8 44 M82 64 L82 44 M8 48 L82 48" stroke="#8a5a3c" strokeWidth="5" strokeLinecap="round" />
+        <path d="M45 64 L45 8" stroke="#7a4a2e" strokeWidth="4" />
+        <path d="M45 8 L74 16 L45 26 Z" fill={color} />
       </svg>
     </div>
   );
@@ -243,51 +301,83 @@ function LogBridge({ x, y }) {
 
 // ---------- one world ----------
 
-function WorldH({ category, index, pages, left, vw, H, starsFor, numberFor, onSelect, registerPath, boat }) {
+function WorldH({ category, index, pages, left, vw, H, starsFor, numberFor, onSelect, registerRoute, explorer, boatInUse }) {
   const biome = biomeFor(index);
   const n = pages.length;
   const W = worldWidth(n);
-  const stops = pages.map((_, i) => [SIGN + i * COL + COL / 2, H * stopY(i)]);
-  const d = smoothPath([[0, H * ENTRY], [SIGN * 0.75, H * ENTRY], ...stops, [W - TAIL * 0.35, H * EXIT], [W, H * EXIT]]);
-  const pathRef = useRef(null);
   const r = rng(index + 3);
+  const trailColors = TRAIL[biome.key] ?? TRAIL.sky;
 
+  // Levels sit on dry land, alternating near bank / far bank.
+  const stops = pages.map((_, i) => [SIGN + i * COL + COL / 2, H * stopY(i)]);
+  // The stream meanders through the middle.
+  const streamPts = [[0, H * ENTRY], [SIGN * 0.45, H * 0.74]];
+  for (let k = 0; k <= 2 * n; k++) streamPts.push([SIGN + (k * COL) / 2, H * streamYAt(k)]);
+  streamPts.push([W - TAIL * 0.45, H * 0.6], [W, H * EXIT]);
+  const streamD = smoothPath(streamPts);
+
+  // The trail: dock -> level -> bridge -> level ... -> lookout.
+  const dock = [SIGN * 0.45, H * 0.74 + 46];
+  const crossings = [];
+  const trailPts = [dock];
+  stops.forEach((pt, i) => {
+    trailPts.push(pt);
+    if (i < n - 1) {
+      const c = [pt[0] + COL / 2, H * streamYAt(2 * i + 1)];
+      const dir = stops[i + 1][1] > pt[1] ? 1 : -1;
+      crossings.push({ c });
+      // approach, cross straight over the water, and leave on the other bank
+      trailPts.push([c[0] - 6, c[1] - dir * 74], c, [c[0] + 6, c[1] + dir * 74]);
+    }
+  });
+  const lookout = [W - 58, H * 0.72]; // near bank, at the top of the stairs down the cliff
+  const last = stops[n - 1];
+  if (last[1] < H * 0.5) {
+    const c = [last[0] + COL * 0.62, H * streamYAt(2 * n)];
+    crossings.push({ c });
+    trailPts.push([c[0] - 6, c[1] - 74], c, [c[0] + 6, c[1] + 74]);
+  }
+  trailPts.push(lookout);
+  const trailD = smoothPath(trailPts);
+
+  const trailRef = useRef(null);
+  const streamRef = useRef(null);
   useLayoutEffect(() => {
-    registerPath(index, pathRef.current, stops);
+    registerRoute(index, { trail: trailRef.current, stream: streamRef.current, stops, dock });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, H, n]);
 
   const art = [];
   pages.forEach((p, i) => {
     const [x, y] = stops[i];
-    const topStop = y < H * 0.5;
+    const farBank = y < H * 0.5;
     const Near = biome.near[i % biome.near.length];
     const Critter = biome.critters[i % biome.critters.length];
-    // Opposite band from the level: near band is bigger (closer), far band smaller.
-    if (topStop) art.push({ Comp: Near, x: x + 10, bottom: H * 0.995, w: Math.min(190, H * 0.28), key: `n${i}` });
-    else if (i > 0) art.push({ Comp: Near, x: x - 6, bottom: H * 0.36, w: Math.min(120, H * 0.17), key: `n${i}`, far: true });
+    // Scenery in the opposite band from each level: bigger in front, smaller far away.
+    if (farBank) art.push({ Comp: Near, x: x + 6, bottom: H * 1.0, w: Math.min(170, H * 0.25), key: `n${i}` });
+    else if (i > 0) art.push({ Comp: Near, x: x - 6, bottom: H * 0.33, w: Math.min(110, H * 0.15), key: `n${i}`, far: true });
     if (i < n - 1) {
       const mx = x + COL / 2;
-      const critterTop = i % 2 === 0;
-      art.push({ Comp: Critter, x: mx, bottom: critterTop ? H * 0.34 : H * 0.97, w: critterTop ? 56 : 80, key: `c${i}`, critter: true, far: critterTop });
-      art.push({ Comp: A.Rock, x: mx - 40, bottom: H * 0.585 + 26, w: 34, key: `r${i}` });
-      art.push({ Comp: A.Rock, x: mx + 42, bottom: H * 0.585 - 22, w: 26, key: `q${i}` });
+      const top = i % 2 === 0;
+      art.push({ Comp: Critter, x: mx + (top ? 40 : -40), bottom: top ? H * 0.33 : H * 0.99, w: top ? 50 : 68, key: `c${i}`, critter: true, far: top });
+      art.push({ Comp: A.Rock, x: mx - 92, bottom: H * streamYAt(2 * i + 1) + 40, w: 32, key: `r${i}` });
+      art.push({ Comp: A.Rock, x: mx + 88, bottom: H * streamYAt(2 * i + 1) - 24, w: 24, key: `q${i}` });
     }
-    if (i % 2 === 1 && !biome.snowy) art.push({ Comp: A.Flowers, x: x - 70, bottom: H * 0.99, w: 64, key: `f${i}` });
+    if (i % 2 === 1 && !biome.snowy) art.push({ Comp: A.Flowers, x: x - 80, bottom: H * 0.99, w: 56, key: `f${i}` });
   });
   // grass tufts: bigger near the viewer, smaller toward the horizon
   if (!biome.snowy) {
-    for (let k = 0; k < Math.floor(W / 90); k++) {
-      const depth = r(); // 0 = far (near horizon), 1 = near (bottom)
-      const y = H * (HORIZON + 0.08 + depth * 0.64);
+    for (let k = 0; k < Math.floor(W / 80); k++) {
+      const depth = r();
+      const y = H * (HORIZON + 0.08 + depth * 0.66);
       const x = r() * W;
-      const onStream = Math.abs(y - H * 0.585) < H * 0.2 && x > SIGN * 0.5 && x < W - TAIL * 0.3;
-      if (!onStream) art.push({ Comp: A.Grass, x, bottom: y, w: 18 + depth * 34, key: `g${k}`, far: depth < 0.4, tint: GRASS[biome.key] ?? '#5cc27a' });
+      const inWater = Math.abs(y - H * STREAM_Y) < H * 0.09;
+      if (!inWater) art.push({ Comp: A.Grass, x, bottom: y, w: 16 + depth * 28, key: `g${k}`, far: depth < 0.4, tint: GRASS[biome.key] ?? '#5cc27a' });
     }
   }
-  // big trees framing the far band
+  // trees along the far edge
   for (let x = SIGN + 40; x < W - 200; x += 330 + r() * 120) {
-    art.push({ Comp: biome.edges[Math.floor(r() * biome.edges.length)], x, bottom: H * 0.31, w: Math.min(110, H * 0.16), key: `e${x}`, far: true, dim: true });
+    art.push({ Comp: biome.edges[Math.floor(r() * biome.edges.length)], x, bottom: H * 0.3, w: Math.min(100, H * 0.14), key: `e${x}`, far: true, dim: true });
   }
 
   const speakWorld = () => {
@@ -300,20 +390,28 @@ function WorldH({ category, index, pages, left, vw, H, starsFor, numberFor, onSe
       <Backdrop biome={biome} panelLeft={left} panelW={W} vw={vw} H={H} seed={index + 1} village={biome.key === 'garden' || biome.key === 'autumn'} />
       <Particles kind={biome.particles} seed={index} />
 
-      <StreamSvg d={d} w={W} H={H} biome={biome} pathRef={pathRef} />
+      <TrailSvg d={trailD} w={W} H={H} colors={trailColors} pathRef={trailRef} />
+      <StreamSvg d={streamD} w={W} H={H} biome={biome} pathRef={streamRef} />
       {art.map(({ Comp, x, bottom, w, key, critter, far, dim, tint }, i) => {
         const props = {
           Comp, biome, i, tint, left: x, top: bottom, width: w,
           transform: 'translate(-50%, -100%)',
           filter: dim ? 'saturate(.8) brightness(1.04)' : undefined,
           opacity: far ? 0.95 : 1,
-          zIndex: far ? 5 : 30,
+          zIndex: far ? 5 : 12,
         };
         return critter ? <CritterArt key={key} {...props} /> : <Art key={key} {...props} />;
       })}
-      <Art Comp={biome.landmark} biome={biome} i={0} left={W - 170} top={H * 0.985} width={Math.min(260, H * 0.42)} transform="translate(-50%, -100%)" zIndex={15} />
+      <Art Comp={biome.landmark} biome={biome} i={0} left={W - 215} top={H * 0.34} width={Math.min(170, H * 0.26)} transform="translate(-50%, -100%)" zIndex={6} />
+      {crossings.map(({ c }) => <PlankBridge key={c[0]} x={c[0]} y={c[1]} angle={90} />)}
+      <Dock x={dock[0]} y={dock[1] + 8} />
+      {!boatInUse && (
+        <div className="pointer-events-none absolute z-[21] world-bob" style={{ left: dock[0] - 70, top: dock[1] - 46, transform: 'translate(-50%, -72%) scale(.8)' }} aria-hidden="true">
+          <ExplorerBoat avatar={null} />
+        </div>
+      )}
+      <Lookout x={lookout[0]} y={lookout[1]} color={category.color} />
       <Foreground biome={biome} panelLeft={left} panelW={W} vw={vw} H={H} seed={index + 30} />
-      <LogBridge x={SIGN * 0.62} y={H * ENTRY} />
       <Ribbon category={category} biome={biome} index={index} onSpeak={speakWorld} />
 
       <h2 id={`world-${category.id}`} className="sr-only">{category.name}</h2>
@@ -326,11 +424,11 @@ function WorldH({ category, index, pages, left, vw, H, starsFor, numberFor, onSe
           top={stops[i][1]}
           number={numberFor(p)}
           stars={starsFor(p)}
-          scale={stops[i][1] < H * 0.5 ? 0.9 : 1}
+          scale={0.9}
           onSelect={onSelect}
         />
       ))}
-      {boat}
+      {explorer}
     </section>
   );
 }
@@ -374,6 +472,29 @@ function FallH({ upper, lower, left, vw, H, seed }) {
           <rect key={i} x={10 + (i % 3) * 48 + r() * 10} y={cliffTop + 20 + Math.floor(i / 3) * ((H - cliffTop) / 5)} width={40 + r() * 16} height={(H - cliffTop) / 6} rx="12" fill={i % 2 ? upper.cliff.dark : '#fff'} opacity={i % 2 ? 0.5 : 0.12} />
         ))}
         <path d={`M0 ${cliffTop - 6} Q40 ${cliffTop + 14} 80 ${cliffTop} T160 ${cliffTop + 4} L160 ${cliffTop + 16} Q120 ${cliffTop + 28} 80 ${cliffTop + 16} T0 ${cliffTop + 18} Z`} fill={upper.cliff.lip} />
+        {/* wooden stairs zig-zagging down the cliff beside the waterfall */}
+        {(() => {
+          const top = y1 + 54; // start just below the stream on the near bank
+          const span = H * 0.78 - top;
+          const pts = [[22, top], [86, top + span / 2], [22, top + span], [64, top + span + 16]];
+          const steps = [];
+          for (let f = 0; f < 3; f++) {
+            const [x1, y1] = pts[f];
+            const [x2, y2] = pts[f + 1];
+            const count = Math.max(2, Math.round(Math.hypot(x2 - x1, y2 - y1) / 11));
+            for (let k = 0; k <= count; k++) {
+              const t = k / count;
+              steps.push(<rect key={`${f}-${k}`} x={x1 + (x2 - x1) * t - 13} y={y1 + (y2 - y1) * t - 3} width="26" height="7" rx="2" fill={k % 2 ? '#c98f5a' : '#b47a4a'} />);
+            }
+          }
+          return (
+            <g>
+              <path d={`M${pts.map(([x, y]) => `${x + 14} ${y - 8}`).join(' L')}`} stroke="#7a4a2e" strokeWidth="3.5" fill="none" strokeLinejoin="round" />
+              {steps}
+              {pts.map(([x, y]) => <circle key={y} cx={x + 14} cy={y - 8} r="4" fill="#7a4a2e" />)}
+            </g>
+          );
+        })()}
         {/* stream arriving on top, then the fall */}
         <path d={`M0 ${y1} L118 ${y1}`} stroke={upper.bank} strokeWidth="88" strokeLinecap="butt" />
         <path d={`M0 ${y1} L126 ${y1}`} stroke={upper.water} strokeWidth="66" />
@@ -481,13 +602,13 @@ const JourneyHorizontal = forwardRef(function JourneyHorizontal(
   ref,
 ) {
   const scrollerRef = useRef(null);
-  const boatRef = useRef(null);
+  const explorerRef = useRef(null);
   const paths = useRef({});
   const anim = useRef(null);
   const audioStarted = useRef(false);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [active, setActive] = useState(-1);
-  const [boat, setBoat] = useState(null); // { world, len, flip }
+  const [explorer, setExplorer] = useState(null); // { world, mode: 'boat' | 'walk', len, flip, moving }
 
   useLayoutEffect(() => {
     const el = scrollerRef.current;
@@ -572,82 +693,124 @@ const JourneyHorizontal = forwardRef(function JourneyHorizontal(
   useEffect(() => { if (audioStarted.current) setAmbience(active >= 0 ? biomeFor(active).ambience : SKY.ambience); }, [active]);
   useEffect(() => () => stopAmbience(), []);
 
-  // ----- the boat -----
-  const registerPath = useCallback((world, el, stops) => {
-    if (!el) return;
+  // ----- the explorer: paddles in by swan boat, then walks the trail -----
+  const nearestLen = (samples, [x, y]) => {
+    let best = 0, bestD = Infinity;
+    for (const [len, p] of samples) {
+      const dd = (p.x - x) ** 2 + (p.y - y) ** 2;
+      if (dd < bestD) { bestD = dd; best = len; }
+    }
+    return best;
+  };
+  const sample = (el) => {
     const total = el.getTotalLength();
-    const samples = [];
-    for (let s = 0; s <= total; s += 6) samples.push([s, el.getPointAtLength(s)]);
-    const stopLens = stops.map(([x, y]) => {
-      let best = 0, bestD = Infinity;
-      for (const [s, p] of samples) {
-        const dd = (p.x - x) ** 2 + (p.y - y) ** 2;
-        if (dd < bestD) { bestD = dd; best = s; }
-      }
-      return best;
-    });
-    paths.current[world] = { el, total, stopLens };
+    const out = [];
+    for (let len = 0; len <= total; len += 5) out.push([len, el.getPointAtLength(len)]);
+    return { el, total, samples: out };
+  };
+  const registerRoute = useCallback((world, { trail, stream, stops, dock }) => {
+    if (!trail || !stream) return;
+    const t = sample(trail);
+    const st = sample(stream);
+    paths.current[world] = {
+      trail: t,
+      stream: st,
+      stopLens: stops.map((pt) => nearestLen(t.samples, pt)),
+      dockBoatLen: nearestLen(st.samples, [dock[0], dock[1] - 46]),
+    };
   }, []);
 
-  // Initial boat spot: the last level played, else the first world's entrance.
+  // Where the explorer starts: beside the last level played, else in the boat at the first dock.
   useEffect(() => {
-    if (!H || boat || !worlds.length) return;
+    if (!H || explorer || !worlds.length) return;
     let lastId = null;
     try { lastId = Number(localStorage.getItem('coloredin:last')); } catch { /* ignore */ }
     const t = setTimeout(() => {
-      let spot = { world: 0, len: SIGN * 0.62 + 110, flip: false };
+      let spot = paths.current[0] ? { world: 0, mode: 'boat', len: paths.current[0].dockBoatLen, flip: false } : null;
       worlds.forEach((c, wi) => {
         const idx = byCategory[c.id].findIndex((p) => p.id === lastId);
-        if (idx >= 0 && paths.current[wi]) spot = { world: wi, len: Math.max(0, paths.current[wi].stopLens[idx] - 118), flip: false };
+        const route = paths.current[wi];
+        if (idx >= 0 && route) spot = { world: wi, mode: 'walk', len: Math.max(0, route.stopLens[idx] - 62), flip: false };
       });
-      setBoat(spot);
+      if (spot) setExplorer(spot);
     }, 0);
     return () => clearTimeout(t);
-  }, [H, boat, worlds, byCategory]);
+  }, [H, explorer, worlds, byCategory]);
 
-  const placeBoat = useCallback((world, len, flip) => {
-    const p = paths.current[world];
-    const node = boatRef.current;
-    if (!p || !node) return;
-    const pt = p.el.getPointAtLength(Math.max(0, Math.min(p.total, len)));
-    const ahead = p.el.getPointAtLength(Math.max(0, Math.min(p.total, len + (flip ? -6 : 6))));
-    const tilt = Math.max(-14, Math.min(14, (Math.atan2(ahead.y - pt.y, Math.abs(ahead.x - pt.x) || 1) * 180) / Math.PI * 0.45));
-    node.style.transform = `translate(${pt.x}px, ${pt.y}px) translate(-50%, -78%)`;
-    node.firstChild.style.transform = `scaleX(${flip ? -1 : 1}) rotate(${flip ? -tilt : tilt}deg)`;
+  const placeExplorer = useCallback((world, mode, len, flip) => {
+    const route = paths.current[world];
+    const node = explorerRef.current;
+    if (!route || !node) return null;
+    const path = mode === 'boat' ? route.stream : route.trail;
+    const L = Math.max(0, Math.min(path.total, len));
+    const pt = path.el.getPointAtLength(L);
+    node.style.transform = `translate(${pt.x}px, ${pt.y}px)`;
+    const inner = node.firstChild;
+    if (mode === 'boat') {
+      const ahead = path.el.getPointAtLength(Math.min(path.total, L + 6));
+      const tilt = Math.max(-12, Math.min(12, (Math.atan2(ahead.y - pt.y, Math.abs(ahead.x - pt.x) || 1) * 180) / Math.PI * 0.4));
+      inner.style.transform = `translate(-50%, -72%) scaleX(${flip ? -1 : 1}) rotate(${flip ? -tilt : tilt}deg)`;
+    } else {
+      inner.style.transform = `translate(-50%, -94%) scaleX(${flip ? -1 : 1})`;
+    }
+    return pt;
   }, []);
 
-  useLayoutEffect(() => { if (boat) placeBoat(boat.world, boat.len, boat.flip); }, [boat, placeBoat, H]);
+  useLayoutEffect(() => { if (explorer) placeExplorer(explorer.world, explorer.mode, explorer.len, explorer.flip); }, [explorer, placeExplorer, H]);
 
-  const sailTo = useCallback((page) => {
-    const wi = worlds.findIndex((c) => c.id === page.category_id);
-    const si = byCategory[page.category_id].findIndex((p) => p.id === page.id);
-    const p = paths.current[wi];
-    try { localStorage.setItem('coloredin:last', String(page.id)); } catch { /* ignore */ }
-    if (!p || !boat) { onOpen(page); return; }
-    const target = Math.max(0, p.stopLens[si] - 118);
-    let from = boat.world === wi ? boat.len : Math.max(0, target - 260);
-    const scroller = scrollerRef.current;
-    const boatX = layout[boat.world]?.left + (paths.current[boat.world]?.el.getPointAtLength(boat.len).x ?? 0);
-    const onScreen = boatX > scroller.scrollLeft - 100 && boatX < scroller.scrollLeft + scroller.clientWidth + 100;
-    if (boat.world !== wi || !onScreen) from = Math.max(0, target - 260);
-    const flip = target < from;
-    const dur = Math.min(1600, Math.max(450, Math.abs(target - from) * 1.6));
-    cancelAnimationFrame(anim.current);
-    setBoat({ world: wi, len: from, flip });
-    sfx.fill();
+  const animate = (world, mode, from, to, dur) => new Promise((resolve) => {
+    const flip = to < from;
     const t0 = performance.now();
     const step = (now) => {
       const t = Math.min(1, (now - t0) / dur);
       const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
-      placeBoat(wi, from + (target - from) * e, flip);
+      placeExplorer(world, mode, from + (to - from) * e, flip);
       if (t < 1) anim.current = requestAnimationFrame(step);
-      else {
-        setBoat({ world: wi, len: target, flip });
-        setTimeout(() => onOpen(page), 220);
-      }
+      else resolve();
     };
     anim.current = requestAnimationFrame(step);
-  }, [worlds, byCategory, boat, layout, onOpen, placeBoat]);
+  });
+
+  const busy = useRef(false);
+  const travelTo = useCallback(async (page) => {
+    if (busy.current) return;
+    const wi = worlds.findIndex((c) => c.id === page.category_id);
+    const si = byCategory[page.category_id].findIndex((p) => p.id === page.id);
+    const route = paths.current[wi];
+    try { localStorage.setItem('coloredin:last', String(page.id)); } catch { /* ignore */ }
+    if (!route || !explorer) { onOpen(page); return; }
+    busy.current = true;
+    cancelAnimationFrame(anim.current);
+
+    const scroller = scrollerRef.current;
+    const cur = paths.current[explorer.world];
+    const curPath = explorer.mode === 'boat' ? cur?.stream : cur?.trail;
+    const curX = (layout[explorer.world]?.left ?? 0) + (curPath ? curPath.el.getPointAtLength(explorer.len).x : 0);
+    const onScreen = curX > scroller.scrollLeft - 80 && curX < scroller.scrollLeft + scroller.clientWidth + 80;
+    const sameWorld = explorer.world === wi && onScreen;
+
+    let walkFrom;
+    if (!sameWorld || explorer.mode === 'boat') {
+      // Paddle in on the swan boat, hop onto the dock.
+      const boatFrom = sameWorld ? explorer.len : Math.max(0, route.dockBoatLen - 240);
+      setExplorer({ world: wi, mode: 'boat', len: boatFrom, flip: false, moving: true });
+      sfx.fill();
+      await new Promise((r) => requestAnimationFrame(r));
+      await animate(wi, 'boat', boatFrom, route.dockBoatLen, 700);
+      walkFrom = 0;
+    } else {
+      walkFrom = explorer.len;
+    }
+    const goingForward = route.stopLens[si] >= walkFrom;
+    const target = Math.max(0, route.stopLens[si] + (goingForward ? -62 : 62));
+    setExplorer({ world: wi, mode: 'walk', len: walkFrom, flip: !goingForward, moving: true });
+    await new Promise((r) => requestAnimationFrame(r));
+    sfx.tool();
+    await animate(wi, 'walk', walkFrom, target, Math.min(1900, Math.max(500, Math.abs(target - walkFrom) * 1.5)));
+    setExplorer({ world: wi, mode: 'walk', len: target, flip: !goingForward, moving: false });
+    busy.current = false;
+    setTimeout(() => onOpen(page), 200);
+  }, [worlds, byCategory, explorer, layout, onOpen, placeExplorer]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => () => cancelAnimationFrame(anim.current), []);
 
@@ -657,9 +820,13 @@ const JourneyHorizontal = forwardRef(function JourneyHorizontal(
     kickAudio,
   }), [layout, kickAudio]);
 
-  const boatEl = avatar && (
-    <div ref={boatRef} className="pointer-events-none absolute left-0 top-0 z-[25] will-change-transform">
-      <div><div className="world-bob"><ExplorerBoat avatar={avatar} /></div></div>
+  const explorerEl = avatar && explorer && (
+    <div ref={explorerRef} className="pointer-events-none absolute left-0 top-0 z-[35] will-change-transform">
+      <div data-moving={explorer.moving ? 'true' : 'false'}>
+        {explorer.mode === 'boat'
+          ? <div className="world-bob"><ExplorerBoat avatar={avatar} /></div>
+          : <WalkingExplorer avatar={avatar} />}
+      </div>
     </div>
   );
 
@@ -685,9 +852,10 @@ const JourneyHorizontal = forwardRef(function JourneyHorizontal(
                 H={H}
                 starsFor={starsFor}
                 numberFor={numberFor}
-                onSelect={sailTo}
-                registerPath={registerPath}
-                boat={boat?.world === i ? boatEl : null}
+                onSelect={travelTo}
+                registerRoute={registerRoute}
+                explorer={explorer?.world === i ? explorerEl : null}
+                boatInUse={explorer?.world === i && explorer.mode === 'boat'}
               />
               {i < worlds.length - 1 && <FallH upper={biomeFor(i)} lower={biomeFor(i + 1)} left={layout[i].left + layout[i].width} vw={vw} H={H} seed={i + 1} />}
             </div>

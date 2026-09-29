@@ -52,21 +52,41 @@ export default function LevelStop({ page, category, left, top, number, stars = 0
   );
 }
 
-/** The explorer rowing their boat. Anchored at the waterline centre. */
-export function ExplorerBoat({ avatar, flip = false, tilt = 0 }) {
+/** The explorer on foot. Anchored at the feet (the parent places the point). */
+export function WalkingExplorer({ avatar }) {
   return (
-    <div className="pointer-events-none relative h-[112px] w-[136px]" style={{ transform: `scaleX(${flip ? -1 : 1}) rotate(${tilt}deg)` }}>
-      <div className="absolute bottom-[34px] left-1/2 h-[92px] -translate-x-1/2">
-        <Avatar a={avatar} crop="bust" wave className="h-full w-auto" />
-      </div>
-      <svg viewBox="0 0 136 60" className="absolute bottom-0 left-0 w-full overflow-visible" aria-hidden="true">
-        <ellipse cx="68" cy="54" rx="64" ry="7" fill="#fff" opacity=".55" className="boat-wake" />
-        <path d="M100 18 L128 46" stroke="#c98a4a" strokeWidth="5" strokeLinecap="round" className="boat-oar" style={{ transformOrigin: '100px 18px' }} />
-        <ellipse cx="130" cy="48" rx="8" ry="4" fill="#c98a4a" className="boat-oar" style={{ transformOrigin: '100px 18px' }} />
-        <path d="M4 18 L132 18 C126 40 110 50 94 50 L42 50 C26 50 10 40 4 18 Z" fill="#b5703a" />
-        <path d="M4 18 L132 18 L130 25 L6 25 Z" fill="#8a5a3c" />
-        <path d="M20 36 L116 36" stroke="#8a5a3c" strokeWidth="2" opacity=".5" />
-        <circle cx="30" cy="30" r="3" fill="#ffd84d" />
+    <div className="explorer-walk relative h-[92px] w-[70px]">
+      <span className="absolute bottom-0 left-1/2 h-2.5 w-12 -translate-x-1/2 rounded-full bg-black/20 blur-[1px]" />
+      <Avatar a={avatar} className="relative h-full w-auto" />
+    </div>
+  );
+}
+
+/** The explorer in a swan paddle boat. Anchored near the waterline. */
+export function ExplorerBoat({ avatar }) {
+  return (
+    <div className="pointer-events-none relative h-[118px] w-[150px]">
+      {avatar && (
+        <div className="absolute bottom-[34px] left-[34%] h-[80px] -translate-x-1/2">
+          <Avatar a={avatar} crop="bust" wave className="h-full w-auto" />
+        </div>
+      )}
+      <svg viewBox="0 0 150 80" className="absolute bottom-0 left-0 w-full overflow-visible" aria-hidden="true">
+        <ellipse cx="70" cy="74" rx="66" ry="7" fill="#fff" opacity=".55" className="boat-wake" />
+        {/* swan body */}
+        <path d="M8 36 C8 64 40 72 76 72 C108 72 124 62 128 44 L118 40 C112 50 96 54 76 54 L24 54 C16 54 12 46 8 36 Z" fill="#fff" stroke="#d9d2e6" strokeWidth="2" />
+        <path d="M8 36 C20 40 30 34 36 28 C44 38 60 40 70 36 C62 50 40 56 24 54 C16 54 12 46 8 36 Z" fill="#f4eefa" />
+        <path d="M20 44 C34 40 44 44 52 50" stroke="#ffbad1" strokeWidth="4" fill="none" strokeLinecap="round" />
+        {/* neck and head */}
+        <path d="M112 46 C130 40 132 22 124 12 C118 4 106 8 108 18" stroke="#fff" strokeWidth="11" fill="none" strokeLinecap="round" />
+        <circle cx="112" cy="14" r="9" fill="#fff" />
+        <path d="M104 14 L94 18 L104 20 Z" fill="#ff9f43" />
+        <circle cx="112" cy="12" r="2" fill="#2a1630" />
+        {/* paddle wheel */}
+        <g className="boat-paddle" style={{ transformOrigin: '80px 60px' }}>
+          {[0, 60, 120].map((a) => <rect key={a} x="78" y="46" width="4" height="28" rx="2" fill="#b867d3" transform={`rotate(${a} 80 60)`} />)}
+        </g>
+        <circle cx="80" cy="60" r="6" fill="#8b2b9e" />
       </svg>
     </div>
   );
