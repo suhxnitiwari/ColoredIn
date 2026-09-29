@@ -165,7 +165,7 @@ export default function ColorPage() {
             <ColoringCanvas
               ref={canvasRef}
               imageUrl={page.image_url}
-              draftKey={`coloredin:draft:${page.id}`}
+              draftKey={`coloredin:draft:${page.image_url}`}
               tool={tool}
               color={color}
               brushSize={size.size}
