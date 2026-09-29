@@ -3,7 +3,7 @@ import { Category, ColoringPage } from '../models/index.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
-const fields = ['name', 'description', 'color', 'sort_order'];
+const fields = ['name', 'description', 'color', 'icon', 'sort_order'];
 const pick = (body) => Object.fromEntries(fields.filter((f) => body[f] !== undefined).map((f) => [f, body[f]]));
 
 router.get('/', async (_req, res) => {

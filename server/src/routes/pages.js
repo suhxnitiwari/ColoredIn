@@ -4,7 +4,7 @@ import { requireAuth, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
 const fields = ['title', 'job_description', 'fun_fact', 'image_url', 'audio_url', 'category_id'];
-const pick = (body) => Object.fromEntries(fields.filter((f) => body[f] !== undefined).map((f) => [f, body[f]]));
+const pick = (body) => Object.fromEntries(fields.filter((f) => body[f] !== undefined).map((f) => [f, body[f] === '' ? null : body[f]]));
 const include = [{ model: Category, as: 'category', attributes: ['id', 'name', 'color'] }];
 
 router.get('/', async (req, res) => {
@@ -20,8 +20,8 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', requireAuth, requireAdmin, async (req, res) => {
   const data = pick(req.body);
-  if (!data.title || !data.job_description || !data.image_url || !data.category_id) {
-    return res.status(400).json({ error: 'Title, description, image URL and category are required.' });
+  if (!data.title || !data.job_description || !data.category_id) {
+    return res.status(400).json({ error: 'Title, description and category are required.' });
   }
   const page = await ColoringPage.create({ ...data, created_by: req.user.id });
   res.status(201).json(await ColoringPage.findByPk(page.id, { include }));

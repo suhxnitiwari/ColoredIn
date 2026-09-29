@@ -13,6 +13,7 @@ export const Category = sequelize.define('Category', {
   name: { type: DataTypes.STRING, allowNull: false, unique: true },
   description: DataTypes.TEXT,
   color: { type: DataTypes.STRING, defaultValue: '#b867d3' },
+  icon: { type: DataTypes.STRING, defaultValue: '✨' }, // emoji shown on the stream map
   sort_order: { type: DataTypes.INTEGER, defaultValue: 0 },
 }, { tableName: 'career_categories', underscored: true });
 
@@ -20,7 +21,7 @@ export const ColoringPage = sequelize.define('ColoringPage', {
   title: { type: DataTypes.STRING, allowNull: false },
   job_description: { type: DataTypes.TEXT, allowNull: false },
   fun_fact: DataTypes.TEXT,
-  image_url: { type: DataTypes.STRING, allowNull: false },
+  image_url: DataTypes.STRING, // null until the drawing exists ("coming soon")
   audio_url: DataTypes.STRING,
 }, { tableName: 'coloring_pages', underscored: true });
 

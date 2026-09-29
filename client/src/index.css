@@ -74,3 +74,19 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* STREAMS river map */
+.stream-flow { animation: stream-flow 2.4s linear infinite; }
+.stream-flow-slow { animation: stream-flow 4s linear infinite; }
+@keyframes stream-flow { to { stroke-dashoffset: -96; } }
+.stream-sway { transform-box: fill-box; transform-origin: 50% 100%; animation: stream-sway 3.6s ease-in-out infinite alternate; }
+@keyframes stream-sway { from { transform: rotate(-2.5deg); } to { transform: rotate(2.5deg); } }
+.stream-bob { animation: stream-bob 3.2s ease-in-out infinite; }
+@keyframes stream-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+.stream-stone-inner { transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.stream-stone:hover .stream-stone-inner, .stream-stone:focus-visible .stream-stone-inner { transform: scale(1.1); }
+.stream-stone:focus-visible circle:nth-of-type(2) { stroke: var(--color-plum-900); }
+.stream-cloud { animation: stream-cloud 40s ease-in-out infinite alternate; }
+@keyframes stream-cloud { from { transform: translateX(-30px); } to { transform: translateX(30px); } }
+.stream-spin { animation: stream-spin 30s linear infinite; }
+@keyframes stream-spin { to { transform: rotate(360deg); } }

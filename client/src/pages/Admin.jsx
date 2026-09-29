@@ -86,7 +86,7 @@ export default function Admin() {
             className="btn-primary"
             onClick={() => setEditing(tab === 'pages'
               ? { kind: 'page', item: { title: '', job_description: '', fun_fact: '', image_url: '', audio_url: '', category_id: categories[0]?.id } }
-              : { kind: 'category', item: { name: '', description: '', color: '#b867d3', sort_order: categories.length } })}
+              : { kind: 'category', item: { name: '', description: '', color: '#b867d3', icon: '✨', sort_order: categories.length } })}
           >
             <Icon name="plus" size={20} /> {tab === 'pages' ? 'New page' : 'New category'}
           </button>
@@ -189,13 +189,15 @@ export default function Admin() {
 function Row({ thumb, title, subtitle, dot, onEdit, onDelete }) {
   return (
     <li className="flex items-center gap-4 px-5 py-3">
-      {thumb
-        ? <img src={thumb} alt="" className="h-14 w-14 rounded-xl bg-white object-contain ring-1 ring-lilac-200" />
+      {thumb !== undefined
+        ? (thumb
+          ? <img src={thumb} alt="" className="h-14 w-14 rounded-xl bg-white object-contain ring-1 ring-lilac-200" />
+          : <span className="grid h-14 w-14 place-items-center rounded-xl border-2 border-dashed text-xs text-plum-700/70" style={{ borderColor: dot }}>soon</span>)
         : <span className="h-10 w-10 rounded-full" style={{ background: dot }} />}
       <div className="min-w-0 flex-1">
         <p className="truncate font-display text-lg font-semibold">{title}</p>
         <p className="flex items-center gap-1.5 truncate text-sm text-plum-700">
-          {thumb && dot && <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: dot }} />}
+          {thumb !== undefined && dot && <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: dot }} />}
           {subtitle}
         </p>
       </div>
@@ -224,7 +226,7 @@ function PageForm({ item, categories, onSave, onCancel }) {
           <span className="mt-1 block text-xs text-plum-700/70">{form.job_description.split(/\s+/).filter(Boolean).length} words · aim for under 35</span>
         </label>
         <label><span className="label">Fun fact (optional)</span><input className="input" value={form.fun_fact ?? ''} onChange={set('fun_fact')} /></label>
-        <label><span className="label">Line-art image URL</span><input className="input" required value={form.image_url} onChange={set('image_url')} placeholder="/pages/marine-biologist.png" /></label>
+        <label><span className="label">Line-art image URL (blank = "drawing coming soon")</span><input className="input" value={form.image_url ?? ''} onChange={set('image_url')} placeholder="/pages/marine-biologist.png" /></label>
         <label><span className="label">Read-aloud audio URL (optional)</span><input className="input" value={form.audio_url ?? ''} onChange={set('audio_url')} placeholder="Leave blank to generate automatically" /></label>
       </div>
       <div>
@@ -253,6 +255,7 @@ function CategoryForm({ item, onSave, onCancel }) {
         <label><span className="label">Color</span><input type="color" className="input h-12 !p-1" value={form.color} onChange={set('color')} /></label>
         <label><span className="label">Sort order</span><input type="number" className="input" value={form.sort_order} onChange={set('sort_order')} /></label>
       </div>
+      <label><span className="label">Emoji for the stream map</span><input className="input" value={form.icon ?? ''} onChange={set('icon')} maxLength={8} /></label>
       <div className="mt-2 flex justify-end gap-2">
         <button type="button" className="btn-soft" onClick={onCancel}>Cancel</button>
         <button type="submit" className="btn-primary">Save category</button>
