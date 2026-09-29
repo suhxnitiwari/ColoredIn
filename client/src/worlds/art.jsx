@@ -556,3 +556,163 @@ export const RowboatGirl = () => (
     <path d="M30 84 L130 84" stroke="#8a5a3c" strokeWidth="2" opacity=".5" />
   </Svg>
 );
+
+// ---------- landmarks: one set piece per world, tied to its STREAMS letter ----------
+
+const Mound = ({ color = '#7bd88f', w = 200 }) => (
+  <>
+    <ellipse cx={w / 2} cy="196" rx={w / 2} ry="22" fill="#1b3a2a" opacity=".12" />
+    <path d={`M0 200 C${w * 0.1} 150 ${w * 0.9} 150 ${w} 200 Z`} fill={color} />
+    <path d={`M${w * 0.2} 170 C${w * 0.4} 160 ${w * 0.6} 160 ${w * 0.78} 168`} stroke="#fff" strokeOpacity=".35" strokeWidth="5" fill="none" strokeLinecap="round" />
+  </>
+);
+
+/** S: a treehouse lab with a telescope pointed at the sky. */
+export const TreehouseLab = () => (
+  <Svg vb="0 0 200 200">
+    <Mound color="#5cc27a" />
+    <path d="M92 170 L96 70 L108 70 L112 170 Z" fill="#8a5a3c" />
+    <circle cx="100" cy="46" r="44" fill="#2f8f55" />
+    <circle cx="60" cy="60" r="26" fill="#3fae68" />
+    <circle cx="142" cy="58" r="28" fill="#3fae68" />
+    <rect x="62" y="80" width="80" height="54" rx="6" fill="#e9b872" stroke="#8a5a3c" strokeWidth="4" />
+    <path d="M54 84 L102 52 L150 84 Z" fill="#f25c5c" stroke="#b33f3f" strokeWidth="3" strokeLinejoin="round" />
+    <rect x="76" y="96" width="20" height="18" rx="3" fill="#a7def0" stroke="#8a5a3c" strokeWidth="3" />
+    <rect x="108" y="100" width="20" height="34" rx="3" fill="#8a5a3c" />
+    <path d="M140 92 L176 70" stroke="#4a90e2" strokeWidth="9" strokeLinecap="round" />
+    <circle cx="178" cy="69" r="6" fill="#a7def0" stroke="#4a90e2" strokeWidth="3" />
+    <path d="M150 88 L148 104 M150 88 L160 102" stroke="#3a3a44" strokeWidth="3" />
+    <path d="M70 134 L70 170 M134 134 L134 170" stroke="#8a5a3c" strokeWidth="4" />
+    {[140, 150, 160].map((y) => <path key={y} d={`M64 ${y} L76 ${y}`} stroke="#8a5a3c" strokeWidth="3" />)}
+  </Svg>
+);
+
+/** T: a rocket on its launch pad. */
+export const RocketPad = () => (
+  <Svg vb="0 0 200 200">
+    <Mound color="#f2cf8e" />
+    <path d="M60 176 L140 176 L132 164 L68 164 Z" fill="#8a97a8" />
+    <path d="M78 164 L78 120 M122 164 L122 120" stroke="#b0bac6" strokeWidth="5" />
+    <path d="M100 20 C124 44 128 90 124 140 L76 140 C72 90 76 44 100 20 Z" fill="#fff" stroke="#c9d3de" strokeWidth="3" />
+    <path d="M100 20 C112 32 118 44 120 56 L80 56 C82 44 88 32 100 20 Z" fill="#f25c5c" />
+    <circle cx="100" cy="84" r="13" fill="#5fa8f5" stroke="#4a90e2" strokeWidth="4" />
+    <circle cx="96" cy="80" r="4" fill="#fff" opacity=".7" />
+    <path d="M76 116 L56 146 L78 140 Z M124 116 L144 146 L122 140 Z" fill="#f25c5c" />
+    <path d="M86 140 L114 140 L108 152 L92 152 Z" fill="#8a97a8" />
+    <g className="world-flame" style={{ transformOrigin: '100px 152px' }}>
+      <path d="M90 152 C92 170 100 180 100 186 C100 180 108 170 110 152 Z" fill="#ffd84d" />
+      <path d="M95 152 C96 164 100 170 100 174 C100 170 104 164 105 152 Z" fill="#ff9f43" />
+    </g>
+    <text x="100" y="118" textAnchor="middle" fontSize="12" fontWeight="700" fill="#4a90e2" fontFamily="Fredoka, sans-serif">GO!</text>
+  </Svg>
+);
+
+/** R: a giant stack of books with a door, like a tiny library. */
+export const BookNook = () => (
+  <Svg vb="0 0 200 200">
+    <Mound color="#e0945a" />
+    {[['#c060d8', 36, 150, 128], ['#4a90e2', 44, 122, 116], ['#f25c5c', 38, 94, 124], ['#3fae8f', 50, 66, 104], ['#ffd84d', 56, 40, 92]].map(([c, x, y, w]) => (
+      <g key={y}>
+        <rect x={x} y={y} width={w} height="28" rx="5" fill={c} stroke="#5a3c2c" strokeWidth="3" />
+        <rect x={x + w - 14} y={y + 4} width="8" height="20" rx="2" fill="#fff5e6" />
+        <path d={`M${x + 10} ${y + 14} L${x + w - 26} ${y + 14}`} stroke="#fff" strokeOpacity=".6" strokeWidth="3" />
+      </g>
+    ))}
+    <path d="M84 178 L84 158 C84 146 110 146 110 158 L110 178 Z" fill="#8a5a3c" stroke="#5a3c2c" strokeWidth="3" />
+    <circle cx="104" cy="164" r="2.5" fill="#ffd84d" />
+    <path d="M140 40 C150 24 170 24 168 38 L150 44 Z" fill="#fff" stroke="#5a3c2c" strokeWidth="2" />
+    <path d="M150 44 L172 22" stroke="#3a3a44" strokeWidth="3" />
+  </Svg>
+);
+
+/** E: a construction crane lifting a steel beam. */
+export const Crane = () => (
+  <Svg vb="0 0 200 200">
+    <Mound color="#8fcf9c" />
+    <rect x="58" y="164" width="60" height="16" rx="3" fill="#3a3a44" />
+    <path d="M78 164 L78 36 L94 36 L94 164" fill="none" stroke="#ffd84d" strokeWidth="6" />
+    {[52, 72, 92, 112, 132, 152].map((y) => <path key={y} d={`M78 ${y} L94 ${y - 16}`} stroke="#ffd84d" strokeWidth="4" />)}
+    <path d="M40 36 L186 36" stroke="#ffd84d" strokeWidth="8" strokeLinecap="round" />
+    <path d="M86 36 L86 18 L40 36 M86 18 L186 36" stroke="#e39a2b" strokeWidth="3" fill="none" />
+    <rect x="34" y="40" width="22" height="18" rx="2" fill="#8a97a8" />
+    <rect x="94" y="42" width="22" height="18" rx="3" fill="#4a90e2" />
+    <rect x="98" y="46" width="14" height="8" rx="2" fill="#a7def0" />
+    <g className="world-swing-slow" style={{ transformOrigin: '164px 36px' }}>
+      <path d="M164 36 L164 104" stroke="#3a3a44" strokeWidth="2.5" />
+      <path d="M158 104 L170 104 L164 112 Z" fill="#3a3a44" />
+      <rect x="130" y="112" width="68" height="14" rx="2" fill="#f25c5c" stroke="#b33f3f" strokeWidth="2" />
+      {[140, 152, 164, 176, 188].map((x) => <path key={x} d={`M${x} 112 L${x} 126`} stroke="#b33f3f" strokeWidth="2" />)}
+    </g>
+  </Svg>
+);
+
+/** A: a little stage with curtains, a spotlight and a microphone. */
+export const Stage = () => (
+  <Svg vb="0 0 200 200">
+    <Mound color="#9fdcaa" />
+    <path d="M30 170 L170 170 L176 150 L24 150 Z" fill="#b5703a" stroke="#8a5a3c" strokeWidth="3" />
+    <rect x="34" y="40" width="132" height="110" fill="#6b2a78" />
+    <path d="M100 150 L58 150 L100 70 L142 150 Z" fill="#ffe27a" opacity=".45" className="world-beacon" />
+    <path d="M34 40 C50 70 44 110 34 150 L34 40 Z M34 40 L64 40 C62 80 56 120 58 150 L34 150 Z" fill="#e85d75" />
+    <path d="M166 40 L136 40 C138 80 144 120 142 150 L166 150 Z" fill="#e85d75" />
+    <path d="M28 30 L172 30 L172 46 Q150 56 128 46 Q106 56 84 46 Q62 56 40 46 Q34 50 28 46 Z" fill="#b867d3" />
+    {[48, 76, 104, 132, 160].map((x) => <circle key={x} cx={x} cy="30" r="5" fill="#ffd84d" />)}
+    <path d="M100 150 L100 116" stroke="#3a3a44" strokeWidth="3" />
+    <ellipse cx="100" cy="110" rx="7" ry="9" fill="#3a3a44" />
+    <path d="M92 150 L108 150" stroke="#3a3a44" strokeWidth="4" strokeLinecap="round" />
+    {[[70, 100], [130, 96], [116, 70]].map(([x, y]) => <path key={x} d={`M${x} ${y} l3 -8 l3 8 l8 1 l-6 5 l2 8 l-7 -4 l-7 4 l2 -8 l-6 -5 Z`} fill="#ffd84d" />)}
+  </Svg>
+);
+
+/** M: a piggy bank in a cosy scarf, with coins. */
+export const PiggyBank = () => (
+  <Svg vb="0 0 200 200">
+    <Mound color="#ffffff" />
+    <path d="M60 130 L56 160 L72 160 L76 134 Z M124 134 L128 160 L144 160 L140 130 Z" fill="#ff8fb3" />
+    <ellipse cx="100" cy="104" rx="66" ry="50" fill="#ffbad1" stroke="#ff8fb3" strokeWidth="4" />
+    <path d="M60 64 L56 40 L78 56 Z" fill="#ff8fb3" />
+    <rect x="86" y="54" width="30" height="7" rx="3.5" fill="#6b2a78" />
+    <ellipse cx="40" cy="108" rx="16" ry="13" fill="#ff8fb3" />
+    <circle cx="35" cy="106" r="3" fill="#b33f6a" />
+    <circle cx="45" cy="106" r="3" fill="#b33f6a" />
+    <circle cx="64" cy="90" r="4.5" fill="#2a1630" />
+    <path d="M166 100 C182 96 180 116 170 110" stroke="#ff8fb3" strokeWidth="4" fill="none" strokeLinecap="round" />
+    <path d="M52 126 C80 140 120 140 150 124 L152 134 C120 150 80 150 50 136 Z" fill="#3fae8f" />
+    <path d="M70 134 L64 164 L78 162 L82 138 Z" fill="#3fae8f" />
+    {[[132, 176], [150, 180], [141, 170]].map(([x, y]) => (
+      <g key={`${x}${y}`}><ellipse cx={x} cy={y} rx="11" ry="6" fill="#e3a92b" /><ellipse cx={x} cy={y - 2} rx="11" ry="6" fill="#ffd84d" /></g>
+    ))}
+  </Svg>
+);
+
+/** S: the lighthouse on a sandy mound. */
+export const LighthouseLandmark = () => (
+  <Svg vb="0 0 200 200">
+    <Mound color="#f2cf8e" />
+    <g transform="translate(50 0)"><Lighthouse /></g>
+  </Svg>
+);
+
+/** "You are here" marker: a smiling girl in a map pin. */
+export const GirlPin = () => (
+  <Svg vb="0 0 80 96">
+    <path d="M40 94 C40 94 8 60 8 38 A32 32 0 0 1 72 38 C72 60 40 94 40 94 Z" fill="#fff" stroke="#8b2b9e" strokeWidth="5" />
+    <circle cx="40" cy="38" r="24" fill="#fbf1ff" />
+    <path d="M18 40 C14 14 66 12 62 40 C66 50 60 60 56 54 L56 36 C48 30 32 30 24 36 L24 54 C18 58 14 50 18 40 Z" fill="#3b2418" />
+    <circle cx="40" cy="42" r="15" fill="#d9955f" />
+    <path d="M25 36 C30 24 50 24 55 36 C48 32 32 32 25 36 Z" fill="#3b2418" />
+    <circle cx="34" cy="41" r="2.4" fill="#2a1630" />
+    <circle cx="46" cy="41" r="2.4" fill="#2a1630" />
+    <circle cx="30" cy="47" r="3" fill="#ff8fb3" opacity=".6" />
+    <circle cx="50" cy="47" r="3" fill="#ff8fb3" opacity=".6" />
+    <path d="M35 49 Q40 53 45 49" stroke="#2a1630" strokeWidth="2" fill="none" strokeLinecap="round" />
+    <circle cx="58" cy="22" r="5" fill="#ffbad1" />
+  </Svg>
+);
+
+export const Star = ({ on }) => (
+  <Svg vb="0 0 24 24">
+    <path d="M12 2.5 L14.9 8.6 L21.5 9.4 L16.6 14 L17.9 20.6 L12 17.3 L6.1 20.6 L7.4 14 L2.5 9.4 L9.1 8.6 Z"
+      fill={on ? '#ffd84d' : '#fff'} stroke={on ? '#e3a92b' : '#c9bcd2'} strokeWidth="1.8" strokeLinejoin="round" />
+  </Svg>
+);

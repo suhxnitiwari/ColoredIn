@@ -1,10 +1,9 @@
-import { Link } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
-import { careerEmoji } from '../lib/careerEmoji.js';
 import { sfx } from '../lib/sound.js';
 import { speak } from '../lib/speech.js';
 import * as A from './art.jsx';
 import { BIOMES, SKY, biomeFor } from './biomes.js';
+import LevelStop from './LevelStop.jsx';
 
 // The STREAMS journey: one continuous stream running down the page through a
 // different world for each career group. Careers are stops along the stream
@@ -19,7 +18,7 @@ const stopY = (i) => HEADER + i * ROW + 74;
 
 const AUTUMN = [['#f28c38', '#ffb45c'], ['#e8594f', '#ff8a7a'], ['#f2b92c', '#ffe07a']];
 
-function smoothPath(points) {
+export function smoothPath(points) {
   let d = `M${points[0][0]},${points[0][1]}`;
   for (let i = 0; i < points.length - 1; i++) {
     const p0 = points[i - 1] || points[i];
@@ -31,16 +30,16 @@ function smoothPath(points) {
 }
 
 /** Deterministic pseudo-random numbers so scenery stays put between renders. */
-function rng(seed) {
+export function rng(seed) {
   let a = seed * 9301 + 49297;
   return () => { a = (a * 1103515245 + 12345) % 2147483648; return a / 2147483648; };
 }
 
-function Art({ Comp, biome, i, ...style }) {
-  const props = { snowy: biome.snowy };
+export function Art({ Comp, biome, i, onClick, className = '', tint, ...style }) {
+  const props = { snowy: biome.snowy, color: tint };
   if (Comp === A.AutumnTree) [props.a, props.b] = AUTUMN[i % AUTUMN.length];
   return (
-    <div className="pointer-events-none absolute" style={style}>
+    <div className={`absolute ${onClick ? 'cursor-pointer' : 'pointer-events-none'} ${className}`} style={style} onClick={onClick}>
       <Comp {...props} />
     </div>
   );
@@ -110,7 +109,7 @@ export function Waterfall({ upper, lower, first }) {
 
 // ---------- one world ----------
 
-function World({ category, index, pages, onPreview, drafts }) {
+function World({ category, index, pages, onSelect, starsFor, numberFor }) {
   const biome = biomeFor(index);
   const n = pages.length;
   const height = HEADER + n * ROW + TAIL;
@@ -196,49 +195,10 @@ function World({ category, index, pages, onPreview, drafts }) {
         </div>
 
         {pages.map((p, i) => (
-          <Stop key={p.id} page={p} category={category} x={stopX(i)} y={stopY(i)} hasDraft={drafts.has(p.image_url)} onPreview={onPreview} />
+          <LevelStop key={p.id} page={p} category={category} left={`${stopX(i)}%`} top={stopY(i)} number={numberFor(p)} stars={starsFor(p)} scale={0.9} onSelect={onSelect} />
         ))}
       </div>
     </section>
-  );
-}
-
-function Stop({ page, category, x, y, hasDraft, onPreview }) {
-  const drawn = Boolean(page.image_url);
-  const circle = (
-    <span
-      className={`relative grid h-[92px] w-[92px] place-items-center overflow-hidden rounded-full bg-white shadow-[0_8px_18px_-8px_rgba(20,40,60,.55)] transition duration-200 group-hover:scale-110 group-active:scale-95 sm:h-[108px] sm:w-[108px] ${drawn ? 'ring-[6px]' : 'ring-4'}`}
-      style={{ '--tw-ring-color': category.color }}
-    >
-      {drawn
-        ? <img src={page.image_url} alt="" className="h-full w-full scale-[1.35] object-cover object-top" loading="lazy" />
-        : <span className="text-5xl" aria-hidden="true">{careerEmoji(page)}</span>}
-    </span>
-  );
-  const badge = drawn
-    ? <span className="absolute -right-1 -top-1 grid h-8 w-8 place-items-center rounded-full text-white shadow ring-2 ring-white" style={{ background: category.color }}><Icon name="brush" size={16} /></span>
-    : <span className="absolute -right-1 -top-1 grid h-8 w-8 place-items-center rounded-full bg-white text-base shadow ring-2 ring-lilac-200" title="Drawing coming soon">✏️</span>;
-  const label = (
-    <span className="mt-2 max-w-[150px] rounded-full bg-white/95 px-3 py-1 text-center font-display text-[15px] font-semibold leading-tight text-plum-900 shadow-sm ring-1 ring-black/5">
-      {page.title}
-    </span>
-  );
-  const inner = (
-    <>
-      <span className="relative">
-        {circle}
-        {badge}
-        {hasDraft && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-mint-300 px-2 py-0.5 font-display text-[11px] text-plum-900">Keep coloring</span>}
-      </span>
-      {label}
-    </>
-  );
-  const cls = 'group absolute z-10 flex -translate-x-1/2 -translate-y-[54px] flex-col items-center outline-none sm:-translate-y-[62px]';
-  const style = { left: `${x}%`, top: y };
-  return drawn ? (
-    <Link to={`/color/${page.id}`} onClick={() => sfx.pick()} className={cls} style={style} aria-label={`Color the ${page.title}`}>{inner}</Link>
-  ) : (
-    <button type="button" onClick={() => onPreview(page)} className={cls} style={style} aria-label={`${page.title}, drawing coming soon`}>{inner}</button>
   );
 }
 
@@ -246,7 +206,7 @@ function Stop({ page, category, x, y, hasDraft, onPreview }) {
 
 const PARTICLE = { leaves: ['🍂', '🍁'], snow: ['❄️'], petals: ['🌸'], butterflies: ['🦋'], gulls: null };
 
-function Particles({ kind, seed }) {
+export function Particles({ kind, seed }) {
   if (!kind) return null;
   const r = rng(seed + 11);
   if (kind === 'gulls') {
@@ -311,7 +271,8 @@ function OceanEnd({ biome }) {
 
 // ---------- the whole journey ----------
 
-export default function Journey({ categories, byCategory, onPreview }) {
+/** Drawings the child has unfinished coloring for (autosaved drafts). */
+export function readDrafts() {
   const drafts = new Set();
   try {
     for (let i = 0; i < localStorage.length; i++) {
@@ -319,6 +280,11 @@ export default function Journey({ categories, byCategory, onPreview }) {
       if (k?.startsWith('coloredin:draft:')) drafts.add(k.slice('coloredin:draft:'.length));
     }
   } catch { /* storage unavailable */ }
+  return drafts;
+}
+
+/** Top-to-bottom journey, used on phones held upright. */
+export default function Journey({ categories, byCategory, onSelect, starsFor, numberFor }) {
 
   const worlds = categories.filter((c) => byCategory[c.id]?.length);
   if (!worlds.length) return null;
@@ -332,7 +298,7 @@ export default function Journey({ categories, byCategory, onPreview }) {
       </div>
       {worlds.map((c, i) => (
         <div key={c.id}>
-          <World category={c} index={i} pages={byCategory[c.id]} onPreview={onPreview} drafts={drafts} />
+          <World category={c} index={i} pages={byCategory[c.id]} onSelect={onSelect} starsFor={starsFor} numberFor={numberFor} />
           {i < worlds.length - 1 && <Waterfall upper={biomeFor(i)} lower={biomeFor(i + 1)} />}
         </div>
       ))}

@@ -105,3 +105,22 @@
 @keyframes world-waves { to { transform: translateX(40px); } }
 .world-bob { animation: world-bob 3s ease-in-out infinite; }
 @keyframes world-bob { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-6px) rotate(2deg); } }
+.world-flame { animation: world-flame 0.25s ease-in-out infinite alternate; }
+@keyframes world-flame { to { transform: scaleY(1.25); } }
+.world-swing-slow { animation: world-swing 3.4s ease-in-out infinite alternate; }
+.world-pin { animation: world-pin 1.4s ease-in-out infinite; }
+@keyframes world-pin { 0%, 100% { transform: translate(-50%, -100%); } 50% { transform: translate(-50%, calc(-100% - 8px)); } }
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.world-rays { animation: world-rays 7s ease-in-out infinite alternate; }
+@keyframes world-rays { from { opacity: 0.04; } to { opacity: 0.16; } }
+.world-cloud { animation: world-cloud-drift 30s ease-in-out infinite alternate; }
+@keyframes world-cloud-drift { from { transform: translateX(-40px); } to { transform: translateX(40px); } }
+.waterfall-mist { transform-box: fill-box; transform-origin: center; animation: foam 3s ease-in-out infinite; }
+.critter-hop > svg { animation: critter-hop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); transform-origin: 50% 100%; }
+@keyframes critter-hop { 0% { transform: translateY(0) scale(1, 1); } 20% { transform: translateY(0) scale(1.15, 0.85); } 50% { transform: translateY(-28px) scale(0.92, 1.08); } 80% { transform: translateY(0) scale(1.08, 0.92); } 100% { transform: none; } }
+.avatar-wave { animation: avatar-wave 0.9s ease-in-out infinite alternate; }
+@keyframes avatar-wave { from { transform: rotate(-8deg); } to { transform: rotate(14deg); } }
+.boat-oar { animation: boat-oar 1.4s ease-in-out infinite alternate; }
+@keyframes boat-oar { from { transform: rotate(-12deg); } to { transform: rotate(16deg); } }
+.boat-wake { transform-box: fill-box; transform-origin: center; animation: foam 2s ease-in-out infinite; }
