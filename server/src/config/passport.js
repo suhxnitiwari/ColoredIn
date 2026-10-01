@@ -19,7 +19,7 @@ if (googleEnabled) {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: `${process.env.SERVER_URL || 'http://localhost:5001'}/auth/google/callback`,
+    callbackURL: `${process.env.SERVER_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:5001'}/auth/google/callback`,
   }, async (_accessToken, _refreshToken, profile, done) => {
     try {
       const email = profile.emails?.[0]?.value?.toLowerCase();

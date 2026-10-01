@@ -1,5 +1,7 @@
 # ColoredIn: Color Your Future
 
+**Live:** https://coloredin.onrender.com (free Render instance, so the first visit after a quiet spell can take about a minute to wake up)
+
 A free coloring app that introduces girls (ages 3–9) to real careers where women are underrepresented. Each page shows a diverse female character actively building or creating, with a kid-friendly job description kids can hear read aloud.
 
 ## Quick start
@@ -48,4 +50,4 @@ React + Vite, React Router, Tailwind v4, Axios · Node/Express 5, Sequelize, Pas
 
 ## Deploying to Render
 
-One web service. Build: `npm run build`. Start: `npm start`. Env: `DATABASE_URL` (Neon), `SESSION_SECRET`, `SERVER_URL` (your Render URL), `CLIENT_URL` (empty or the same URL), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ADMIN_EMAILS`, optional `ELEVENLABS_API_KEY`.
+One web service. Build: `npm run build`. Start: `npm start`. Env: `DATABASE_URL` (Neon or Render Postgres), `SESSION_SECRET`, `SERVER_URL` (optional on Render; defaults to `RENDER_EXTERNAL_URL`), `CLIENT_URL` (empty or the same URL), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ADMIN_EMAILS`, optional `ELEVENLABS_API_KEY`.
