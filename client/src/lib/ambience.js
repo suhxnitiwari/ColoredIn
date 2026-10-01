@@ -1,6 +1,7 @@
 // Gentle, synthesized nature sounds for the adventure map: a babbling brook
 // under everything, plus birds, wind or waves depending on the world.
-// Kept very quiet; it should feel like a place, not a soundtrack.
+// Kept very quiet; it should feel like a place, not a soundtrack. A soft
+// music-box melody (from Bunny Trails) wanders on top.
 import { isMuted } from './sound.js';
 
 let ctx;
@@ -8,6 +9,7 @@ let master;
 let noise;
 let layers = {};
 let birdTimer;
+let musicTimer;
 let current = null;
 
 function noiseBuffer() {
@@ -75,7 +77,52 @@ function ensureGraph() {
   waves.gain.value = 0;
   noiseSource().connect(waveFilter).connect(waveAmp).connect(waves).connect(master);
 
-  layers = { brook, wind, waves };
+  const music = ctx.createGain();
+  music.gain.value = 0.9;
+  music.connect(master);
+
+  layers = { brook, wind, waves, music };
+}
+
+function note(freq, start, dur, vol, type) {
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, start);
+  g.gain.setValueAtTime(0, start);
+  g.gain.linearRampToValueAtTime(vol, start + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+  osc.connect(g).connect(layers.music);
+  osc.start(start);
+  osc.stop(start + dur + 0.05);
+}
+
+// C major pentatonic melody over a slow bass, eighth notes at 92 bpm.
+// Notes are scheduled slightly ahead of time so the timer can be lazy.
+function startMusic() {
+  clearInterval(musicTimer);
+  const scale = [523.25, 587.33, 659.25, 783.99, 880, 1046.5];
+  const bass = [130.81, 174.61, 196, 146.83];
+  const beat = 60 / 92 / 2;
+  let step = 0;
+  let next = ctx.currentTime + 0.2;
+  let degree = 2;
+  musicTimer = setInterval(() => {
+    while (next < ctx.currentTime + 0.25) {
+      if (step % 8 === 0) note(bass[(step / 8) % 4], next, beat * 7, 0.5, 'sine');
+      if (step % 2 === 0 || Math.random() < 0.3) {
+        degree = Math.max(0, Math.min(scale.length - 1, degree + [-1, 0, 1, 1, -2, 2][Math.floor(Math.random() * 6)]));
+        note(scale[degree], next, beat * 2.5, 0.3, 'triangle');
+      }
+      step = (step + 1) % 32;
+      next += beat;
+    }
+  }, 60);
+}
+
+function stopMusic() {
+  clearInterval(musicTimer);
+  musicTimer = null;
 }
 
 function chirp() {
@@ -124,18 +171,25 @@ export function startAmbience(kind) {
   master.gain.setTargetAtTime(isMuted() ? 0 : 0.06, ctx.currentTime, 0.6);
   current = null;
   setAmbience(kind);
+  if (!isMuted()) startMusic();
 }
 
 export function refreshAmbienceVolume() {
   if (!ctx) return;
   master.gain.setTargetAtTime(isMuted() ? 0 : 0.06, ctx.currentTime, 0.3);
-  if (isMuted()) clearTimeout(birdTimer);
-  else if (['jungle', 'forest', 'garden'].includes(current)) scheduleBirds(true);
+  if (isMuted()) {
+    clearTimeout(birdTimer);
+    stopMusic();
+  } else {
+    if (['jungle', 'forest', 'garden'].includes(current)) scheduleBirds(true);
+    if (!musicTimer && current) startMusic();
+  }
 }
 
 export function stopAmbience() {
   if (!ctx) return;
   clearTimeout(birdTimer);
+  stopMusic();
   master.gain.setTargetAtTime(0, ctx.currentTime, 0.3);
   current = null;
 }

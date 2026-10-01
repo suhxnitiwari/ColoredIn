@@ -15,25 +15,25 @@ import LevelStop, { ExplorerBoat, WalkingExplorer } from './LevelStop.jsx';
 // a waterfall between worlds. The explorer paddles in on a swan boat, then
 // walks a trail on land, crossing the stream on bridges, to each level.
 
-const SIGN = 300; // space at the start of a world (title ribbon + bridge)
+const SIGN = 300; // space at the start of a world (title ribbon + dock)
 const COL = 214; // horizontal space per level
-const TAIL = 320; // space at the end of a world (landmark)
-const FALL_W = 250;
+const TAIL = 300; // space at the end of a world
+const FALL_W = 280;
 const END_W = 780;
-const HORIZON = 0.27;
-const ENTRY = 0.8; // stream height where it enters a world (after the fall)
-const EXIT = 0.47; // stream height where it leaves a world (top of the cliff)
-const STREAM_Y = 0.655; // the stream meanders through the middle of each world
-const TOP_Y = 0.4; // levels on the far bank
-const BOT_Y = 0.8; // levels on the near bank
-const stopY = (i) => (i % 2 === 0 ? BOT_Y : TOP_Y);
+// Ground-level side view, like a storybook: sky on top, the river in the
+// middle distance, and the walking path along the front where the explorer
+// stands. Nothing is ever below ground.
+const HORIZON = 0.44; // where the sky meets the land
+const RIVER = 0.61; // river runs across the middle distance
+const PATH = 0.855; // the walking path: the explorer's feet stand here
+const SIGN_Y = 0.47; // centre of each level sign (on a post beside the path)
 const worldWidth = (n) => SIGN + n * COL + TAIL;
-const streamYAt = (k) => STREAM_Y + 0.018 * Math.sin(k * 1.3); // k = half-column index
+const riverY = (x) => RIVER + 0.012 * Math.sin(x / 190);
 
-// Dirt, sand or snow trail colours per world: [edge, path]
+// Path colours per world: [edge, surface]
 const TRAIL = {
-  rainforest: ['#a9824f', '#d9b27a'], desert: ['#d2a865', '#f3dcaa'], autumn: ['#9c6b3f', '#d6a36c'],
-  mountains: ['#9a8a74', '#cbbba1'], garden: ['#c9a36f', '#ecd3a6'], tundra: ['#b9cbe0', '#f4f8fd'], beach: ['#e0c188', '#f8e8c2'], sky: ['#a9824f', '#d9b27a'],
+  rainforest: ['#b08a58', '#e2bf8a'], desert: ['#d2a865', '#f6e2b4'], autumn: ['#a8764a', '#e0b27c'],
+  mountains: ['#a0907a', '#d6c7ad'], garden: ['#c9a36f', '#f0dab0'], tundra: ['#b9cbe0', '#ffffff'], beach: ['#e0c188', '#fbeccb'], sky: ['#b08a58', '#e2bf8a'],
 };
 
 const GRASS = { desert: '#d1a95e', autumn: '#d08a45', beach: '#8fbf6a', garden: '#6fcf8a', mountains: '#6fbf84' };
@@ -197,23 +197,6 @@ function Foreground({ biome, panelLeft, panelW, vw, H, seed }) {
   );
 }
 
-// ---------- stream helpers ----------
-
-function StreamSvg({ d, w, H, biome, pathRef }) {
-  const common = { d, fill: 'none', strokeLinecap: 'round' };
-  return (
-    <svg className="pointer-events-none absolute left-0 top-0" width={w} height={H} aria-hidden="true">
-      <path {...common} stroke="#1b3a2a" strokeOpacity=".1" strokeWidth="86" transform="translate(0 6)" />
-      <path {...common} stroke={biome.bank} strokeWidth="80" />
-      <path ref={pathRef} {...common} stroke={biome.water} strokeWidth="60" />
-      <path {...common} stroke={biome.light} strokeWidth="26" opacity=".75" />
-      <path {...common} stroke="#fff" strokeWidth="3" strokeDasharray="16 38" opacity=".85" className="stream-flow" />
-      <path {...common} stroke="#fff" strokeWidth="2" strokeDasharray="6 46" opacity=".6" className="stream-flow-slow" transform="translate(0 14)" />
-      <path {...common} stroke="#fff" strokeWidth="2" strokeDasharray="6 52" opacity=".5" className="stream-flow" transform="translate(0 -14)" />
-    </svg>
-  );
-}
-
 function Ribbon({ category, biome, index, onSpeak }) {
   return (
     <div className="absolute left-6 top-[7%] z-30 flex items-center">
@@ -236,66 +219,98 @@ function Ribbon({ category, biome, index, onSpeak }) {
   );
 }
 
-/** A walking trail on land (drawn under the stream; bridges carry it across). */
-function TrailSvg({ d, w, H, colors, pathRef }) {
+/** The walking path along the front of the scene, with arched bridges over creeks. */
+function pathD(W, H, creeks) {
+  const y = H * PATH;
+  let d = `M-40 ${y}`;
+  for (const cx of creeks) {
+    d += ` L${cx - 70} ${y} Q${cx - 40} ${y} ${cx - 26} ${y - 22} Q${cx} ${y - 40} ${cx + 26} ${y - 22} Q${cx + 40} ${y} ${cx + 70} ${y}`;
+  }
+  return `${d} L${W + 40} ${y}`;
+}
+
+function riverD(W, H, from = 0, to = W) {
+  const pts = [];
+  for (let x = from - 40; x <= to + 40; x += 40) pts.push([x, H * riverY(x)]);
+  return smoothPath(pts);
+}
+
+function Ground({ W, H, biome, creeks, trail, pathRef, riverRef, riverDOverride }) {
+  const y = H * PATH;
+  const rd = riverDOverride ?? riverD(W, H);
   return (
-    <svg className="pointer-events-none absolute left-0 top-0" width={w} height={H} aria-hidden="true">
-      <path d={d} fill="none" stroke="#1b3a2a" strokeOpacity=".1" strokeWidth="34" strokeLinecap="round" transform="translate(0 4)" />
-      <path d={d} fill="none" stroke={colors[0]} strokeWidth="30" strokeLinecap="round" />
-      <path ref={pathRef} d={d} fill="none" stroke={colors[1]} strokeWidth="22" strokeLinecap="round" />
-      <path d={d} fill="none" stroke={colors[0]} strokeWidth="4" strokeLinecap="round" strokeDasharray="2 26" opacity=".7" />
+    <svg className="pointer-events-none absolute left-0 top-0" width={W} height={H} aria-hidden="true">
+      {/* river across the middle distance */}
+      <path d={rd} fill="none" stroke={biome.bank} strokeWidth="46" strokeLinecap="round" />
+      <path ref={riverRef} d={rd} fill="none" stroke={biome.water} strokeWidth="34" strokeLinecap="round" />
+      <path d={rd} fill="none" stroke={biome.light} strokeWidth="12" opacity=".7" strokeLinecap="round" />
+      <path d={rd} fill="none" stroke="#fff" strokeWidth="2.5" strokeDasharray="12 34" opacity=".85" className="stream-flow" />
+      {/* creeks running from the river toward us, under the bridges */}
+      {creeks.map((cx) => {
+        const top = H * riverY(cx);
+        return (
+          <g key={cx}>
+            <path d={`M${cx - 16} ${top} C${cx - 20} ${(top + y) / 2} ${cx - 34} ${y - 10} ${cx - 44} ${H + 10} L${cx + 44} ${H + 10} C${cx + 34} ${y - 10} ${cx + 20} ${(top + y) / 2} ${cx + 16} ${top} Z`} fill={biome.bank} />
+            <path d={`M${cx - 11} ${top} C${cx - 14} ${(top + y) / 2} ${cx - 26} ${y - 10} ${cx - 34} ${H + 10} L${cx + 34} ${H + 10} C${cx + 26} ${y - 10} ${cx + 14} ${(top + y) / 2} ${cx + 11} ${top} Z`} fill={biome.water} />
+            <path d={`M${cx} ${top + 6} L${cx} ${H}`} stroke="#fff" strokeWidth="2.5" strokeDasharray="10 22" opacity=".8" className="waterfall-flow" />
+          </g>
+        );
+      })}
+      {/* the path: a flat dirt / sand / snow walkway on the ground */}
+      <rect x="-40" y={y - 4} width={W + 80} height="30" rx="14" fill="#1b3a2a" opacity=".08" />
+      <path d={`M-40 ${y - 12} L${W + 40} ${y - 12} L${W + 40} ${y + 18} L-40 ${y + 18} Z`} fill={trail[0]} />
+      <path d={`M-40 ${y - 12} L${W + 40} ${y - 12} L${W + 40} ${y + 12} L-40 ${y + 12} Z`} fill={trail[1]} />
+      <path d={`M-40 ${y + 2} L${W + 40} ${y + 2}`} stroke={trail[0]} strokeWidth="3" strokeDasharray="3 30" opacity=".6" />
+      {/* the walking line the explorer follows (invisible) */}
+      <path ref={pathRef} d={pathD(W, H, creeks)} fill="none" stroke="none" />
     </svg>
   );
 }
 
-/** Wooden plank bridge with railings, rotated to follow the trail. */
-function PlankBridge({ x, y, angle }) {
+/** Arched wooden footbridge over a creek, seen from the side. */
+function ArchBridge({ x, y }) {
   return (
-    <div className="pointer-events-none absolute z-[24]" style={{ left: x, top: y, transform: `translate(-50%, -50%) rotate(${angle}deg)` }} aria-hidden="true">
-      <svg width="128" height="64" viewBox="0 0 170 64" preserveAspectRatio="none" className="overflow-visible">
-        <rect x="6" y="12" width="158" height="40" rx="6" fill="#1b3a2a" opacity=".15" transform="translate(0 6)" />
-        <rect x="6" y="14" width="158" height="36" rx="5" fill="#b47a4a" />
-        {Array.from({ length: 12 }, (_, i) => (
-          <rect key={i} x={10 + i * 13} y="14" width="10" height="36" rx="2" fill={i % 2 ? '#c98f5a' : '#b98050'} />
-        ))}
-        <path d="M6 12 Q85 2 164 12" stroke="#8a5a3c" strokeWidth="5" fill="none" strokeLinecap="round" />
-        <path d="M6 52 Q85 62 164 52" stroke="#8a5a3c" strokeWidth="5" fill="none" strokeLinecap="round" />
-        {[6, 46, 85, 124, 164].map((px) => (
-          <g key={px}>
-            <circle cx={px} cy={px === 85 ? 4 : px === 46 || px === 124 ? 7 : 12} r="4.5" fill="#7a4a2e" />
-            <circle cx={px} cy={px === 85 ? 60 : px === 46 || px === 124 ? 57 : 52} r="4.5" fill="#7a4a2e" />
-          </g>
-        ))}
+    <div className="pointer-events-none absolute z-[26]" style={{ left: x, top: y, transform: 'translate(-50%, -78%)' }} aria-hidden="true">
+      <svg width="170" height="92" viewBox="0 0 170 92">
+        <path d="M6 70 Q85 18 164 70 L164 80 Q85 30 6 80 Z" fill="#b47a4a" stroke="#7a4a2e" strokeWidth="3" strokeLinejoin="round" />
+        {Array.from({ length: 11 }, (_, i) => {
+          const t = (i + 0.5) / 11;
+          const px = 6 + t * 158;
+          const py = 70 - Math.sin(t * Math.PI) * 26;
+          return <path key={i} d={`M${px} ${py} L${px} ${py + 10}`} stroke="#8a5a3c" strokeWidth="2" />;
+        })}
+        <path d="M10 44 Q85 -6 160 44" stroke="#8a5a3c" strokeWidth="5" fill="none" strokeLinecap="round" />
+        {[0.08, 0.3, 0.5, 0.7, 0.92].map((t) => {
+          const px = 6 + t * 158;
+          const top = 44 - Math.sin(t * Math.PI) * 25;
+          const deck = 70 - Math.sin(t * Math.PI) * 26;
+          return <path key={t} d={`M${px} ${top} L${px} ${deck}`} stroke="#7a4a2e" strokeWidth="5" strokeLinecap="round" />;
+        })}
+        <path d="M6 80 L6 92 M164 80 L164 92" stroke="#7a4a2e" strokeWidth="7" />
       </svg>
     </div>
   );
 }
 
-/** A little wooden dock where the paddle boat ties up. */
-function Dock({ x, y }) {
+/** Wooden signpost that holds a level button above the path. */
+function Signpost({ x, top, bottom }) {
   return (
-    <div className="pointer-events-none absolute z-[22]" style={{ left: x, top: y, transform: 'translate(-50%, -100%)' }} aria-hidden="true">
-      <svg width="64" height="70" viewBox="0 0 64 70">
-        <rect x="8" y="6" width="48" height="58" rx="4" fill="#b47a4a" />
-        {[0, 1, 2, 3, 4].map((i) => <rect key={i} x="8" y={8 + i * 11.5} width="48" height="8" rx="2" fill={i % 2 ? '#c98f5a' : '#a86f42'} />)}
-        {[[6, 4], [58, 4], [6, 62], [58, 62]].map(([cx, cy]) => <circle key={`${cx}${cy}`} cx={cx} cy={cy} r="5.5" fill="#7a4a2e" />)}
-      </svg>
+    <div className="pointer-events-none absolute z-[18]" style={{ left: x - 7, top, height: bottom - top, width: 14 }} aria-hidden="true">
+      <div className="h-full w-full rounded-t-md bg-gradient-to-r from-[#8a5a3c] via-[#b47a4a] to-[#8a5a3c] shadow-[2px_0_0_rgba(0,0,0,.08)]" />
+      <div className="absolute -bottom-1 left-1/2 h-3 w-10 -translate-x-1/2 rounded-full bg-black/15 blur-[1px]" />
     </div>
   );
 }
 
-/** Wooden lookout at the top of the waterfall, where each world's trail ends. */
-function Lookout({ x, y, color }) {
+/** Little wooden jetty from the path out to the river, where the swan boat ties up. */
+function Jetty({ x, H }) {
+  const top = H * riverY(x) + 10;
+  const bottom = H * PATH - 10;
   return (
-    <div className="pointer-events-none absolute z-[22]" style={{ left: x, top: y, transform: 'translate(-50%, -85%)' }} aria-hidden="true">
-      <svg width="90" height="96" viewBox="0 0 90 96">
-        <ellipse cx="45" cy="88" rx="40" ry="8" fill="#1b3a2a" opacity=".15" />
-        <rect x="8" y="64" width="74" height="22" rx="4" fill="#b47a4a" />
-        <path d="M8 64 L8 44 M82 64 L82 44 M8 48 L82 48" stroke="#8a5a3c" strokeWidth="5" strokeLinecap="round" />
-        <path d="M45 64 L45 8" stroke="#7a4a2e" strokeWidth="4" />
-        <path d="M45 8 L74 16 L45 26 Z" fill={color} />
-      </svg>
-    </div>
+    <svg className="pointer-events-none absolute z-[15]" style={{ left: x - 50, top }} width="100" height={bottom - top} viewBox={`0 0 100 ${bottom - top}`} preserveAspectRatio="none" aria-hidden="true">
+      <path d={`M36 0 L64 0 L84 ${bottom - top} L16 ${bottom - top} Z`} fill="#b47a4a" />
+      {Array.from({ length: 6 }, (_, i) => <path key={i} d={`M${34 - i * 3.5} ${(i + 0.5) * ((bottom - top) / 6)} L${66 + i * 3.5} ${(i + 0.5) * ((bottom - top) / 6)}`} stroke="#8a5a3c" strokeWidth="2" />)}
+    </svg>
   );
 }
 
@@ -306,78 +321,40 @@ function WorldH({ category, index, pages, left, vw, H, starsFor, numberFor, onSe
   const n = pages.length;
   const W = worldWidth(n);
   const r = rng(index + 3);
-  const trailColors = TRAIL[biome.key] ?? TRAIL.sky;
+  const trail = TRAIL[biome.key] ?? TRAIL.sky;
+  const signs = pages.map((_, i) => [SIGN + i * COL + COL / 2, H * (SIGN_Y + (i % 2 ? -0.02 : 0.02))]);
+  // A creek (with a footbridge) between every other pair of levels.
+  const creeks = pages.slice(0, -1).map((_, i) => SIGN + (i + 1) * COL).filter((_, i) => i % 2 === 1);
+  const jettyX = SIGN * 0.5;
 
-  // Levels sit on dry land, alternating near bank / far bank.
-  const stops = pages.map((_, i) => [SIGN + i * COL + COL / 2, H * stopY(i)]);
-  // The stream meanders through the middle.
-  const streamPts = [[0, H * ENTRY], [SIGN * 0.45, H * 0.74]];
-  for (let k = 0; k <= 2 * n; k++) streamPts.push([SIGN + (k * COL) / 2, H * streamYAt(k)]);
-  streamPts.push([W - TAIL * 0.45, H * 0.6], [W, H * EXIT]);
-  const streamD = smoothPath(streamPts);
-
-  // The trail: dock -> level -> bridge -> level ... -> lookout.
-  const dock = [SIGN * 0.45, H * 0.74 + 46];
-  const crossings = [];
-  const trailPts = [dock];
-  stops.forEach((pt, i) => {
-    trailPts.push(pt);
-    if (i < n - 1) {
-      const c = [pt[0] + COL / 2, H * streamYAt(2 * i + 1)];
-      const dir = stops[i + 1][1] > pt[1] ? 1 : -1;
-      crossings.push({ c });
-      // approach, cross straight over the water, and leave on the other bank
-      trailPts.push([c[0] - 6, c[1] - dir * 74], c, [c[0] + 6, c[1] + dir * 74]);
-    }
-  });
-  const lookout = [W - 58, H * 0.72]; // near bank, at the top of the stairs down the cliff
-  const last = stops[n - 1];
-  if (last[1] < H * 0.5) {
-    const c = [last[0] + COL * 0.62, H * streamYAt(2 * n)];
-    crossings.push({ c });
-    trailPts.push([c[0] - 6, c[1] - 74], c, [c[0] + 6, c[1] + 74]);
-  }
-  trailPts.push(lookout);
-  const trailD = smoothPath(trailPts);
-
-  const trailRef = useRef(null);
-  const streamRef = useRef(null);
+  const pathRef = useRef(null);
+  const riverRef = useRef(null);
   useLayoutEffect(() => {
-    registerRoute(index, { trail: trailRef.current, stream: streamRef.current, stops, dock });
+    registerRoute(index, { trail: pathRef.current, stream: riverRef.current, stops: signs.map(([x]) => [x, H * PATH]), dockWalk: [jettyX, H * PATH], dockBoat: [jettyX, H * riverY(jettyX)] });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, H, n]);
 
   const art = [];
-  pages.forEach((p, i) => {
-    const [x, y] = stops[i];
-    const farBank = y < H * 0.5;
-    const Near = biome.near[i % biome.near.length];
-    const Critter = biome.critters[i % biome.critters.length];
-    // Scenery in the opposite band from each level: bigger in front, smaller far away.
-    if (farBank) art.push({ Comp: Near, x: x + 6, bottom: H * 1.0, w: Math.min(170, H * 0.25), key: `n${i}` });
-    else if (i > 0) art.push({ Comp: Near, x: x - 6, bottom: H * 0.33, w: Math.min(110, H * 0.15), key: `n${i}`, far: true });
-    if (i < n - 1) {
-      const mx = x + COL / 2;
-      const top = i % 2 === 0;
-      art.push({ Comp: Critter, x: mx + (top ? 40 : -40), bottom: top ? H * 0.33 : H * 0.99, w: top ? 50 : 68, key: `c${i}`, critter: true, far: top });
-      art.push({ Comp: A.Rock, x: mx - 92, bottom: H * streamYAt(2 * i + 1) + 40, w: 32, key: `r${i}` });
-      art.push({ Comp: A.Rock, x: mx + 88, bottom: H * streamYAt(2 * i + 1) - 24, w: 24, key: `q${i}` });
-    }
-    if (i % 2 === 1 && !biome.snowy) art.push({ Comp: A.Flowers, x: x - 80, bottom: H * 0.99, w: 56, key: `f${i}` });
-  });
-  // grass tufts: bigger near the viewer, smaller toward the horizon
-  if (!biome.snowy) {
-    for (let k = 0; k < Math.floor(W / 80); k++) {
-      const depth = r();
-      const y = H * (HORIZON + 0.08 + depth * 0.66);
-      const x = r() * W;
-      const inWater = Math.abs(y - H * STREAM_Y) < H * 0.09;
-      if (!inWater) art.push({ Comp: A.Grass, x, bottom: y, w: 16 + depth * 28, key: `g${k}`, far: depth < 0.4, tint: GRASS[biome.key] ?? '#5cc27a' });
-    }
+  // Background: trees and landmark behind the river (far away, so smaller).
+  for (let x = 40; x < W; x += 150 + r() * 110) {
+    const Comp = biome.edges[Math.floor(r() * biome.edges.length)];
+    art.push({ Comp, x, bottom: H * (RIVER - 0.035), w: Math.min(100, H * 0.13) * (0.8 + r() * 0.4), key: `b${x}`, z: 3, dim: true });
   }
-  // trees along the far edge
-  for (let x = SIGN + 40; x < W - 200; x += 330 + r() * 120) {
-    art.push({ Comp: biome.edges[Math.floor(r() * biome.edges.length)], x, bottom: H * 0.3, w: Math.min(100, H * 0.14), key: `e${x}`, far: true, dim: true });
+  // Middle ground between river and path: bushes, plants and critters.
+  pages.forEach((_, i) => {
+    const mx = SIGN + (i + 1) * COL;
+    if (i < n - 1 && !creeks.includes(mx)) {
+      art.push({ Comp: biome.near[i % biome.near.length], x: mx, bottom: H * (PATH - 0.045), w: Math.min(150, H * 0.22), key: `m${i}`, z: 8 });
+    }
+    const Critter = biome.critters[i % biome.critters.length];
+    art.push({ Comp: Critter, x: signs[i][0] + 70, bottom: H * (PATH - 0.035), w: 52, key: `c${i}`, critter: true, z: 16 });
+  });
+  // Foreground, in front of the path (closest to us, so biggest).
+  for (let x = 60; x < W; x += 120 + r() * 90) {
+    if (creeks.some((c) => Math.abs(c - x) < 70)) continue;
+    const pick = r();
+    const Comp = pick < 0.45 ? A.Grass : pick < 0.75 ? A.Flowers : A.Rock;
+    art.push({ Comp, x, bottom: H * 0.995, w: Comp === A.Rock ? 44 : 60 + r() * 30, key: `f${x}`, z: 30, tint: Comp === A.Grass ? (GRASS[biome.key] ?? '#5cc27a') : undefined });
   }
 
   const speakWorld = () => {
@@ -389,28 +366,26 @@ function WorldH({ category, index, pages, left, vw, H, starsFor, numberFor, onSe
     <section id={`stream-${category.id}`} data-world={index} className="relative h-full shrink-0 overflow-hidden" style={{ width: W }} aria-labelledby={`world-${category.id}`}>
       <Backdrop biome={biome} panelLeft={left} panelW={W} vw={vw} H={H} seed={index + 1} village={biome.key === 'garden' || biome.key === 'autumn'} />
       <Particles kind={biome.particles} seed={index} />
+      <Art Comp={biome.landmark} biome={biome} i={0} left={W - 170} top={H * (RIVER - 0.03)} width={Math.min(190, H * 0.28)} transform="translate(-50%, -100%)" zIndex={4} />
 
-      <TrailSvg d={trailD} w={W} H={H} colors={trailColors} pathRef={trailRef} />
-      <StreamSvg d={streamD} w={W} H={H} biome={biome} pathRef={streamRef} />
-      {art.map(({ Comp, x, bottom, w, key, critter, far, dim, tint }, i) => {
+      <Ground W={W} H={H} biome={biome} creeks={creeks} trail={trail} pathRef={pathRef} riverRef={riverRef} />
+      {art.map(({ Comp, x, bottom, w, key, critter, z, dim, tint }, i) => {
         const props = {
           Comp, biome, i, tint, left: x, top: bottom, width: w,
           transform: 'translate(-50%, -100%)',
-          filter: dim ? 'saturate(.8) brightness(1.04)' : undefined,
-          opacity: far ? 0.95 : 1,
-          zIndex: far ? 5 : 12,
+          filter: dim ? 'saturate(.85) brightness(1.05)' : undefined,
+          zIndex: z,
         };
         return critter ? <CritterArt key={key} {...props} /> : <Art key={key} {...props} />;
       })}
-      <Art Comp={biome.landmark} biome={biome} i={0} left={W - 215} top={H * 0.34} width={Math.min(170, H * 0.26)} transform="translate(-50%, -100%)" zIndex={6} />
-      {crossings.map(({ c }) => <PlankBridge key={c[0]} x={c[0]} y={c[1]} angle={90} />)}
-      <Dock x={dock[0]} y={dock[1] + 8} />
+      <Jetty x={jettyX} H={H} />
       {!boatInUse && (
-        <div className="pointer-events-none absolute z-[21] world-bob" style={{ left: dock[0] - 70, top: dock[1] - 46, transform: 'translate(-50%, -72%) scale(.8)' }} aria-hidden="true">
+        <div className="pointer-events-none absolute z-[14] world-bob" style={{ left: jettyX - 64, top: H * riverY(jettyX) + 6, transform: 'translate(-50%, -72%) scale(.62)' }} aria-hidden="true">
           <ExplorerBoat avatar={null} />
         </div>
       )}
-      <Lookout x={lookout[0]} y={lookout[1]} color={category.color} />
+      {creeks.map((cx) => <ArchBridge key={cx} x={cx} y={H * PATH} />)}
+      {signs.map(([x, y], i) => <Signpost key={pages[i].id} x={x} top={y + 40} bottom={H * PATH} />)}
       <Foreground biome={biome} panelLeft={left} panelW={W} vw={vw} H={H} seed={index + 30} />
       <Ribbon category={category} biome={biome} index={index} onSpeak={speakWorld} />
 
@@ -420,8 +395,8 @@ function WorldH({ category, index, pages, left, vw, H, starsFor, numberFor, onSe
           key={p.id}
           page={p}
           category={category}
-          left={stops[i][0]}
-          top={stops[i][1]}
+          left={signs[i][0]}
+          top={signs[i][1]}
           number={numberFor(p)}
           stars={starsFor(p)}
           scale={0.9}
@@ -448,11 +423,12 @@ function CritterArt(props) {
 
 // ---------- waterfall between worlds ----------
 
-function FallH({ upper, lower, left, vw, H, seed }) {
-  const y1 = H * EXIT;
-  const y2 = H * ENTRY;
+function FallH({ upper, lower, H, seed }) {
   const r = rng(seed * 13);
-  const cliffTop = H * HORIZON + 10;
+  const top = H * 0.18;
+  const pool = H * RIVER;
+  const y = H * PATH;
+  const lowerTrail = TRAIL[lower.key] ?? TRAIL.sky;
   return (
     <div className="relative h-full shrink-0 overflow-hidden" style={{ width: FALL_W }} aria-hidden="true">
       <Backdrop biome={upper} plain H={H} />
@@ -466,53 +442,32 @@ function FallH({ upper, lower, left, vw, H, seed }) {
             <stop offset="1" stopColor={lower.light} />
           </linearGradient>
         </defs>
-        {/* rock wall with the upper world on its plateau */}
-        <path d={`M0 ${cliffTop} L150 ${cliffTop} C168 ${cliffTop + 30} 158 ${H * 0.6} 172 ${H} L0 ${H} Z`} fill={upper.cliff.rock} />
-        {Array.from({ length: 14 }, (_, i) => (
-          <rect key={i} x={10 + (i % 3) * 48 + r() * 10} y={cliffTop + 20 + Math.floor(i / 3) * ((H - cliffTop) / 5)} width={40 + r() * 16} height={(H - cliffTop) / 6} rx="12" fill={i % 2 ? upper.cliff.dark : '#fff'} opacity={i % 2 ? 0.5 : 0.12} />
+        {/* a rocky cliff in the background, with the river pouring down it */}
+        <path d={`M0 ${pool + 20} L0 ${top + 30} Q20 ${top} 60 ${top + 6} L${FALL_W - 60} ${top + 6} Q${FALL_W - 20} ${top} ${FALL_W} ${top + 30} L${FALL_W} ${pool + 20} Z`} fill={upper.cliff.rock} />
+        {Array.from({ length: 16 }, (_, i) => (
+          <rect key={i} x={8 + (i % 4) * 68 + r() * 12} y={top + 24 + Math.floor(i / 4) * ((pool - top) / 4.3)} width={48 + r() * 18} height={(pool - top) / 5.5} rx="12" fill={i % 2 ? upper.cliff.dark : '#fff'} opacity={i % 2 ? 0.45 : 0.12} />
         ))}
-        <path d={`M0 ${cliffTop - 6} Q40 ${cliffTop + 14} 80 ${cliffTop} T160 ${cliffTop + 4} L160 ${cliffTop + 16} Q120 ${cliffTop + 28} 80 ${cliffTop + 16} T0 ${cliffTop + 18} Z`} fill={upper.cliff.lip} />
-        {/* wooden stairs zig-zagging down the cliff beside the waterfall */}
-        {(() => {
-          const top = y1 + 54; // start just below the stream on the near bank
-          const span = H * 0.78 - top;
-          const pts = [[22, top], [86, top + span / 2], [22, top + span], [64, top + span + 16]];
-          const steps = [];
-          for (let f = 0; f < 3; f++) {
-            const [x1, y1] = pts[f];
-            const [x2, y2] = pts[f + 1];
-            const count = Math.max(2, Math.round(Math.hypot(x2 - x1, y2 - y1) / 11));
-            for (let k = 0; k <= count; k++) {
-              const t = k / count;
-              steps.push(<rect key={`${f}-${k}`} x={x1 + (x2 - x1) * t - 13} y={y1 + (y2 - y1) * t - 3} width="26" height="7" rx="2" fill={k % 2 ? '#c98f5a' : '#b47a4a'} />);
-            }
-          }
-          return (
-            <g>
-              <path d={`M${pts.map(([x, y]) => `${x + 14} ${y - 8}`).join(' L')}`} stroke="#7a4a2e" strokeWidth="3.5" fill="none" strokeLinejoin="round" />
-              {steps}
-              {pts.map(([x, y]) => <circle key={y} cx={x + 14} cy={y - 8} r="4" fill="#7a4a2e" />)}
-            </g>
-          );
-        })()}
-        {/* stream arriving on top, then the fall */}
-        <path d={`M0 ${y1} L118 ${y1}`} stroke={upper.bank} strokeWidth="88" strokeLinecap="butt" />
-        <path d={`M0 ${y1} L126 ${y1}`} stroke={upper.water} strokeWidth="66" />
-        <path d={`M118 ${y1 - 33} C150 ${y1 - 33} 156 ${y1} 158 ${y1 + 30} L160 ${y2} L108 ${y2} L110 ${y1 + 33} Z`} fill={`url(#hfall-${seed})`} />
-        {[116, 128, 140, 150].map((x, i) => (
-          <path key={x} d={`M${x} ${y1 - 10} L${x + 4} ${y2 - 10}`} stroke="#fff" strokeWidth={i % 2 ? 3 : 2} strokeDasharray="18 22" opacity=".8" className="waterfall-flow" style={{ animationDelay: `${i * 0.2}s` }} />
+        <path d={`M0 ${top + 30} Q20 ${top} 60 ${top + 6} L${FALL_W - 60} ${top + 6} Q${FALL_W - 20} ${top} ${FALL_W} ${top + 30} L${FALL_W} ${top + 44} Q${FALL_W / 2} ${top + 22} 0 ${top + 44} Z`} fill={upper.cliff.lip} />
+        <path d={`M${FALL_W / 2 - 30} ${top + 10} L${FALL_W / 2 + 30} ${top + 10} L${FALL_W / 2 + 36} ${pool} L${FALL_W / 2 - 36} ${pool} Z`} fill={`url(#hfall-${seed})`} />
+        {[-20, -8, 4, 16, 26].map((dx, i) => (
+          <path key={dx} d={`M${FALL_W / 2 + dx} ${top + 14} L${FALL_W / 2 + dx * 1.15} ${pool - 8}`} stroke="#fff" strokeWidth={i % 2 ? 3 : 2} strokeDasharray="18 22" opacity=".8" className="waterfall-flow" style={{ animationDelay: `${i * 0.2}s` }} />
         ))}
-        {/* pool, foam and mist at the bottom */}
-        <path d={`M100 ${y2} L${FALL_W} ${y2}`} stroke={lower.bank} strokeWidth="88" />
-        <path d={`M96 ${y2} L${FALL_W} ${y2}`} stroke={lower.water} strokeWidth="66" />
-        <ellipse cx="134" cy={y2} rx="62" ry="34" fill={lower.water} />
-        <ellipse cx="134" cy={y2} rx="40" ry="18" fill={lower.light} />
-        {[[108, -8, 14], [124, -14, 17], [146, -10, 16], [164, -4, 13], [134, 2, 18]].map(([x, dy, rr], i) => (
-          <circle key={x} cx={x} cy={y2 + dy} r={rr} fill="#fff" opacity=".92" className="waterfall-foam" style={{ animationDelay: `${i * 0.2}s` }} />
+        {/* the river joins at the bottom of the fall */}
+        <path d={`M-10 ${pool} L${FALL_W + 10} ${pool}`} stroke={lower.bank} strokeWidth="46" />
+        <path d={`M-10 ${pool} L${FALL_W + 10} ${pool}`} stroke={lower.water} strokeWidth="34" />
+        {[[-40, -6, 16], [-16, -12, 19], [12, -10, 18], [36, -4, 15], [0, 2, 20]].map(([dx, dy, rr], i) => (
+          <circle key={dx} cx={FALL_W / 2 + dx} cy={pool + dy} r={rr} fill="#fff" opacity=".92" className="waterfall-foam" style={{ animationDelay: `${i * 0.2}s` }} />
         ))}
-        <ellipse cx="134" cy={y2 - 30} rx="70" ry="26" fill="#fff" opacity=".28" className="waterfall-mist" />
-        <ellipse cx="86" cy={y2 + 30} rx="26" ry="14" fill="#8a939d" />
-        <ellipse cx="190" cy={y2 + 36} rx="30" ry="15" fill="#9aa3ad" />
+        <ellipse cx={FALL_W / 2} cy={pool - 30} rx="80" ry="26" fill="#fff" opacity=".28" className="waterfall-mist" />
+        {/* grassy ground in front, then the path continues across a rope bridge */}
+        <path d={`M0 ${pool + 22} L${FALL_W} ${pool + 22} L${FALL_W} ${H} L0 ${H} Z`} fill={lower.ground[1]} opacity=".35" />
+        <path d={`M-10 ${y - 12} L${FALL_W + 10} ${y - 12} L${FALL_W + 10} ${y + 18} L-10 ${y + 18} Z`} fill={lowerTrail[0]} />
+        <path d={`M-10 ${y - 12} L${FALL_W + 10} ${y - 12} L${FALL_W + 10} ${y + 12} L-10 ${y + 12} Z`} fill={lowerTrail[1]} />
+        {Array.from({ length: 14 }, (_, i) => <rect key={i} x={12 + i * 18.5} y={y - 12} width="14" height="24" rx="2" fill={i % 2 ? '#c98f5a' : '#b47a4a'} />)}
+        <path d={`M8 ${y - 44} Q${FALL_W / 2} ${y - 20} ${FALL_W - 8} ${y - 44}`} stroke="#8a5a3c" strokeWidth="4" fill="none" />
+        {[8, FALL_W / 4, FALL_W / 2, (3 * FALL_W) / 4, FALL_W - 8].map((px, i) => (
+          <path key={px} d={`M${px} ${y - 12} L${px} ${y - 44 + Math.sin((i / 4) * Math.PI) * 18}`} stroke="#7a4a2e" strokeWidth={i === 0 || i === 4 ? 6 : 3} strokeLinecap="round" />
+        ))}
       </svg>
     </div>
   );
@@ -521,40 +476,43 @@ function FallH({ upper, lower, left, vw, H, seed }) {
 // ---------- start and end ----------
 
 function StartH({ W, H, vw, avatar, onGo, onEdit, worlds }) {
-  const spring = [W * 0.64, H * 0.36];
-  const d = smoothPath([spring, [W * 0.8, H * 0.42], [W, H * EXIT]]);
+  const springX = W * 0.5;
+  const riverStart = smoothPath(Array.from({ length: Math.ceil((W - springX) / 40) + 2 }, (_, i) => [springX + i * 40, H * riverY(springX + i * 40)]));
   const name = avatar?.name?.trim();
   return (
     <section className="relative h-full shrink-0 overflow-hidden" style={{ width: W }} aria-label="Start">
       <Backdrop biome={SKY} panelLeft={0} panelW={W} vw={vw} H={H} seed={99} village />
-      <StreamSvg d={d} w={W} H={H} biome={{ ...BIOMES[0], bank: SKY.cliff.lip }} />
-      <div className="absolute z-20" style={{ left: spring[0], top: spring[1], transform: 'translate(-50%, -70%)' }} aria-hidden="true">
-        <div className="w-[90px]"><A.Rock tint="#9aa3ad" /></div>
+      <Ground W={W} H={H} biome={{ ...BIOMES[0], bank: SKY.cliff.lip }} creeks={[]} trail={TRAIL.sky} riverDOverride={riverStart} />
+      <div className="absolute z-20" style={{ left: springX, top: H * riverY(springX), transform: 'translate(-60%, -62%)' }} aria-hidden="true">
+        <div className="w-[84px]"><A.Rock tint="#9aa3ad" /></div>
       </div>
-      <div className="absolute left-[4%] top-[6%] z-30 max-w-[min(60%,460px)]">
+      <div className="absolute left-[4%] top-[6%] z-30 max-w-[min(62%,480px)]">
         <h1 className="font-display text-[clamp(2rem,4.2vw,3.6rem)] font-semibold leading-[1.02] tracking-tight text-plum-900 drop-shadow-[0_2px_0_rgba(255,255,255,.6)]">
           Color your <span className="text-grape-600">future</span>.
         </h1>
         <p className="mt-2 font-display text-lg text-plum-800">
-          Sail the{' '}
+          Explore the{' '}
           {worlds.map((c) => <span key={c.id} className="font-semibold" style={{ color: c.color }}>{c.name[0]}</span>)}
-          {' '}river through 7 worlds!
+          {' '}trail through 7 worlds!
         </p>
       </div>
       {avatar && (
-        <div className="absolute bottom-[3%] left-[6%] z-30 h-[58%]">
-          <Avatar a={avatar} wave className="h-full w-auto drop-shadow-[0_14px_14px_rgba(20,60,30,.3)]" />
-          <div className="absolute -top-2 left-[78%] w-max max-w-[280px] rounded-3xl bg-white px-4 py-3 shadow-xl">
+        <>
+          <div className="absolute z-30" style={{ left: '14%', top: H * PATH, height: H * 0.46, transform: 'translate(-50%, -97%)' }}>
+            <span className="absolute bottom-[2%] left-1/2 h-4 w-[70%] -translate-x-1/2 rounded-full bg-black/20 blur-[2px]" />
+            <Avatar a={avatar} wave className="relative h-full w-auto" />
+          </div>
+          <div className="absolute z-30 w-max max-w-[300px] rounded-3xl bg-white px-4 py-3 shadow-xl" style={{ left: '24%', top: H * PATH - H * 0.46 }}>
             <p className="font-display text-lg leading-snug text-plum-900">
               {name ? `Hi, I'm ${name}! ` : 'Hi there! '}Let's explore the STREAMS!
             </p>
-            <span className="absolute -left-2 bottom-4 h-4 w-4 rotate-45 bg-white" />
+            <span className="absolute -left-2 bottom-5 h-4 w-4 rotate-45 bg-white" />
             <div className="mt-3 flex gap-2">
               <button type="button" onClick={onGo} className="btn-primary !px-5 !py-2.5 text-lg">Let's go! ➜</button>
               <button type="button" onClick={onEdit} className="btn-soft !px-3 !py-2.5 text-sm" aria-label="Change my explorer">✏️ Me</button>
             </div>
           </div>
-        </div>
+        </>
       )}
       <Foreground biome={SKY} panelLeft={0} panelW={W} vw={vw} H={H} seed={7} />
     </section>
@@ -563,34 +521,38 @@ function StartH({ W, H, vw, avatar, onGo, onEdit, worlds }) {
 
 function EndH({ left, H, vw, avatar, stars }) {
   const W = END_W;
-  const lastBiome = BIOMES[BIOMES.length - 1];
-  const shore = W * 0.46;
+  const beach = BIOMES[BIOMES.length - 1];
+  const shore = W * 0.5;
+  const y = H * PATH;
+  const riverEnd = smoothPath(Array.from({ length: Math.ceil(shore / 40) + 1 }, (_, i) => [i * 40 - 40, H * riverY(i * 40 - 40)]));
   return (
     <section className="relative h-full shrink-0 overflow-hidden" style={{ width: W }} aria-label="The ocean">
-      <Backdrop biome={lastBiome} panelLeft={left} panelW={W} vw={vw} H={H} seed={77} />
+      <Backdrop biome={beach} panelLeft={left} panelW={W} vw={vw} H={H} seed={77} />
       <svg className="absolute inset-0" width={W} height={H} aria-hidden="true">
-        <path d={`M0 ${H * EXIT - 33} C${shore * 0.6} ${H * EXIT - 33} ${shore * 0.8} ${H * 0.3} ${shore} ${H * 0.28} L${shore} ${H} C${shore * 0.8} ${H * 0.7} ${shore * 0.6} ${H * EXIT + 33} 0 ${H * EXIT + 33} Z`} fill={lastBiome.water} />
-        <path d={`M${shore - 30} ${H * 0.27} C${shore + 20} ${H * 0.5} ${shore - 40} ${H * 0.75} ${shore + 10} ${H} L${W} ${H} L${W} ${H * 0.27} Z`} fill="#4fc3d9" />
-        <path d={`M${shore + 60} ${H * 0.27} C${shore + 110} ${H * 0.5} ${shore + 50} ${H * 0.75} ${shore + 100} ${H} L${W} ${H} L${W} ${H * 0.27} Z`} fill="#3aa9c9" />
-        <path d={`M${shore + 180} ${H * 0.27} C${shore + 230} ${H * 0.5} ${shore + 170} ${H * 0.75} ${shore + 220} ${H} L${W} ${H} L${W} ${H * 0.27} Z`} fill="#2f93b8" />
+        {/* the sea fills the right side, from the horizon down to the sand */}
+        <path d={`M${shore - 60} ${H * HORIZON} L${W} ${H * HORIZON} L${W} ${H} L${shore + 60} ${H} C${shore + 10} ${H * 0.8} ${shore + 30} ${H * 0.6} ${shore - 60} ${H * HORIZON} Z`} fill="#4fc3d9" />
+        <path d={`M${shore + 40} ${H * HORIZON} L${W} ${H * HORIZON} L${W} ${H} L${shore + 160} ${H} C${shore + 110} ${H * 0.8} ${shore + 130} ${H * 0.6} ${shore + 40} ${H * HORIZON} Z`} fill="#3aa9c9" />
         <g className="world-waves">
-          {[0.35, 0.5, 0.65, 0.8].map((f) => (
-            <path key={f} d={`M${shore - 10 + f * 30} ${H * f} q12 -10 24 0 q12 10 24 0`} stroke="#fff" strokeWidth="4" fill="none" strokeLinecap="round" opacity=".85" />
+          {[0.52, 0.64, 0.76, 0.88].map((f, i) => (
+            <path key={f} d={`M${shore + 20 + i * 18} ${H * f} q12 -10 24 0 q12 10 24 0`} stroke="#fff" strokeWidth="4" fill="none" strokeLinecap="round" opacity=".85" />
           ))}
         </g>
       </svg>
-      <div className="pointer-events-none absolute z-20" style={{ left: W * 0.22, top: H * 0.98, transform: 'translate(-50%, -100%)', width: Math.min(150, H * 0.24) }}><A.Lighthouse /></div>
-      <div className="pointer-events-none absolute z-20 w-[70px]" style={{ left: W * 0.36, top: H * 0.95, transform: 'translate(-50%, -100%)' }}><A.Crab /></div>
+      <Ground W={shore + 10} H={H} biome={beach} creeks={[]} trail={TRAIL.beach} riverDOverride={riverEnd} />
+      <div className="pointer-events-none absolute z-20" style={{ left: shore * 0.62, top: H * (RIVER - 0.02), transform: 'translate(-50%, -100%)', width: Math.min(110, H * 0.17) }}><A.Lighthouse /></div>
+      <div className="pointer-events-none absolute z-20 w-[64px]" style={{ left: shore * 0.8, top: H * 0.99, transform: 'translate(-50%, -100%)' }}><A.Crab /></div>
+      <div className="world-bob absolute z-20 w-[150px]" style={{ left: W * 0.74, top: H * 0.64, transform: 'translate(-50%, -80%)' }}><ExplorerBoat avatar={null} /></div>
       {avatar && (
-        <div className="absolute z-30 h-[46%]" style={{ left: W * 0.08, bottom: '3%' }}>
-          <Avatar a={avatar} wave className="h-full w-auto drop-shadow-[0_12px_12px_rgba(0,0,0,.25)]" />
+        <div className="absolute z-30" style={{ left: shore * 0.34, top: y, height: H * 0.4, transform: 'translate(-50%, -97%)' }}>
+          <span className="absolute bottom-[2%] left-1/2 h-4 w-[70%] -translate-x-1/2 rounded-full bg-black/20 blur-[2px]" />
+          <Avatar a={avatar} wave className="relative h-full w-auto" />
         </div>
       )}
-      <div className="absolute right-[5%] top-[8%] z-30 max-w-[360px] rounded-3xl bg-white/95 p-5 text-center shadow-xl">
+      <div className="absolute right-[5%] top-[7%] z-30 max-w-[340px] rounded-3xl bg-white/95 p-5 text-center shadow-xl">
         <p className="font-display text-3xl font-semibold text-plum-900">You made it to the ocean! 🎉</p>
         <p className="mt-2 font-display text-lg text-plum-700">You've earned <strong className="text-grape-600">⭐ {stars}</strong> stars. Which future will you color next?</p>
       </div>
-      <div className="world-glide absolute right-[18%] top-[30%] w-12" aria-hidden="true"><A.Seagull /></div>
+      <div className="world-glide absolute right-[22%] top-[30%] w-12" aria-hidden="true"><A.Seagull /></div>
     </section>
   );
 }
@@ -708,7 +670,7 @@ const JourneyHorizontal = forwardRef(function JourneyHorizontal(
     for (let len = 0; len <= total; len += 5) out.push([len, el.getPointAtLength(len)]);
     return { el, total, samples: out };
   };
-  const registerRoute = useCallback((world, { trail, stream, stops, dock }) => {
+  const registerRoute = useCallback((world, { trail, stream, stops, dockWalk, dockBoat }) => {
     if (!trail || !stream) return;
     const t = sample(trail);
     const st = sample(stream);
@@ -716,7 +678,8 @@ const JourneyHorizontal = forwardRef(function JourneyHorizontal(
       trail: t,
       stream: st,
       stopLens: stops.map((pt) => nearestLen(t.samples, pt)),
-      dockBoatLen: nearestLen(st.samples, [dock[0], dock[1] - 46]),
+      dockBoatLen: nearestLen(st.samples, dockBoat),
+      dockWalkLen: nearestLen(t.samples, dockWalk),
     };
   }, []);
 
@@ -797,7 +760,7 @@ const JourneyHorizontal = forwardRef(function JourneyHorizontal(
       sfx.fill();
       await new Promise((r) => requestAnimationFrame(r));
       await animate(wi, 'boat', boatFrom, route.dockBoatLen, 700);
-      walkFrom = 0;
+      walkFrom = route.dockWalkLen;
     } else {
       walkFrom = explorer.len;
     }
@@ -840,7 +803,7 @@ const JourneyHorizontal = forwardRef(function JourneyHorizontal(
       {H > 0 && (
         <div className="flex h-full w-max">
           <StartH W={startW} H={H} vw={vw} avatar={avatar} worlds={worlds} onEdit={onEditAvatar} onGo={() => { kickAudio(); sfx.pick(); scrollerRef.current.scrollTo({ left: layout[0].left - 40, behavior: 'smooth' }); }} />
-          <FallH upper={{ ...SKY, water: BIOMES[0].water, bank: SKY.cliff.lip }} lower={BIOMES[0]} left={startW} vw={vw} H={H} seed={0} />
+          <FallH upper={{ ...SKY, water: BIOMES[0].water, bank: SKY.cliff.lip }} lower={BIOMES[0]} H={H} seed={0} />
           {worlds.map((c, i) => (
             <div key={c.id} className="contents">
               <WorldH
@@ -857,7 +820,7 @@ const JourneyHorizontal = forwardRef(function JourneyHorizontal(
                 explorer={explorer?.world === i ? explorerEl : null}
                 boatInUse={explorer?.world === i && explorer.mode === 'boat'}
               />
-              {i < worlds.length - 1 && <FallH upper={biomeFor(i)} lower={biomeFor(i + 1)} left={layout[i].left + layout[i].width} vw={vw} H={H} seed={i + 1} />}
+              {i < worlds.length - 1 && <FallH upper={biomeFor(i)} lower={biomeFor(i + 1)} H={H} seed={i + 1} />}
             </div>
           ))}
           <EndH left={layout[worlds.length].left} H={H} vw={vw} avatar={avatar} stars={totalStars} />

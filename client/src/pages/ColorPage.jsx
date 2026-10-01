@@ -68,7 +68,7 @@ export default function ColorPage() {
     setSaving(true);
     try {
       await api.post('/artworks', { page_id: page.id, colored_image_data: canvasRef.current.exportDataUrl() });
-      sfx.save();
+      sfx.cheer();
       setCelebrate((n) => n + 1);
       toast('Saved to your gallery!');
       if (!muted) speak(`Amazing work, future ${page.title}!`);

@@ -1,7 +1,9 @@
 import Icon from './Icon.jsx';
+import { careerMatch } from '../lib/careerMatch.js';
 
 /** Title, kid-friendly description, fun fact and a read-aloud button for one career. */
 export default function CareerCard({ page, speaking, onSpeak, onClose, bare }) {
+  const match = careerMatch(page.title);
   return (
     <div className={`${bare ? '' : 'card animate-rise p-4'} relative overflow-hidden`}>
       {!bare && <div className="absolute inset-x-0 top-0 h-1.5" style={{ background: page.category?.color }} />}
@@ -29,6 +31,12 @@ export default function CareerCard({ page, speaking, onSpeak, onClose, bare }) {
         <p className="mt-3 flex gap-2 rounded-2xl bg-lilac-50 p-3 text-sm text-plum-700">
           <Icon name="sparkle" size={18} className="mt-0.5 shrink-0 text-grape-500" />
           <span><strong className="font-bold text-plum-900">Fun fact:</strong> {page.fun_fact}</span>
+        </p>
+      )}
+      {match && (
+        <p className="mt-2 flex gap-2 rounded-2xl bg-blush-300/30 p-3 text-sm text-plum-700">
+          <Icon name="heart" size={18} className="mt-0.5 shrink-0 text-grape-500" />
+          <span><strong className="font-bold text-plum-900">You might love this if</strong> {match}</span>
         </p>
       )}
     </div>

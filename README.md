@@ -12,6 +12,14 @@ npm run dev                          # API on :5001, web on :5173
 
 With no `DATABASE_URL`, the API uses a local SQLite file (`server/dev.sqlite`) and seeds 7 categories and 10 pages on boot. With no Google keys, the login page offers **Kid** and **Admin** dev logins (disabled in production).
 
+## Bunny Trails, merged in
+
+ColoredIn and Bunny Trails started as the same idea: help young girls discover careers through play. Bunny Trails was an early game prototype, and its best parts now live here:
+
+- **"You might love this if…"** on every career card, linking each job to something kids already enjoy (`client/src/lib/careerMatch.js`).
+- **A music-box melody** that wanders over the adventure map's nature sounds, built entirely with the Web Audio API (`client/src/lib/ambience.js`).
+- **Celebration sounds:** a sparkle when a career opens and a five-note cheer when artwork is saved (`client/src/lib/sound.js`).
+
 ## The coloring engine (`client/src/coloring/`)
 
 - **Leak-proof fill**: `regions.js` runs in a Web Worker. It morphologically closes small gaps in the line art, labels every fillable region, then assigns ink/anti-aliased pixels to the nearest region, so fills never leak and never leave white halos.

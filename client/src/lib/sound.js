@@ -37,4 +37,10 @@ export const sfx = {
   fill: () => tone({ freq: 330, to: 660, duration: 0.18, gain: 0.07 }),
   undo: () => tone({ freq: 600, to: 400, duration: 0.1, type: 'triangle', gain: 0.05 }),
   save: () => [523, 659, 784, 1047].forEach((f, i) => tone({ freq: f, duration: 0.22, gain: 0.06, delay: i * 0.09 })),
+  // from Bunny Trails: a two-note sparkle and a five-note "you did it" run
+  star: () => {
+    tone({ freq: 988, duration: 0.12, type: 'triangle', gain: 0.06 });
+    tone({ freq: 1319, duration: 0.3, type: 'triangle', gain: 0.06, delay: 0.08 });
+  },
+  cheer: () => [523, 659, 784, 1047, 1319].forEach((f, i) => tone({ freq: f, duration: 0.35, type: 'triangle', gain: 0.06, delay: i * 0.09 })),
 };

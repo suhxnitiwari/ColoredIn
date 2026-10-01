@@ -55,8 +55,8 @@ export default function LevelStop({ page, category, left, top, number, stars = 0
 /** The explorer on foot. Anchored at the feet (the parent places the point). */
 export function WalkingExplorer({ avatar }) {
   return (
-    <div className="explorer-walk relative h-[92px] w-[70px]">
-      <span className="absolute bottom-0 left-1/2 h-2.5 w-12 -translate-x-1/2 rounded-full bg-black/20 blur-[1px]" />
+    <div className="explorer-walk relative h-[128px] w-[96px]">
+      <span className="absolute bottom-0 left-1/2 h-3 w-16 -translate-x-1/2 rounded-full bg-black/20 blur-[1px]" />
       <Avatar a={avatar} className="relative h-full w-auto" />
     </div>
   );

@@ -80,7 +80,7 @@ export default function Home() {
   const open = useCallback((page) => {
     try { localStorage.setItem('coloredin:last', String(page.id)); } catch { /* ignore */ }
     if (page.image_url) navigate(`/color/${page.id}`);
-    else { sfx.pick(); setPreview(page); }
+    else { sfx.star(); setPreview(page); }
   }, [navigate]);
 
   const hear = async (page) => {
